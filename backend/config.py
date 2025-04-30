@@ -1,0 +1,33 @@
+import os
+from pathlib import Path
+
+# Base directory to locate your SQLite file
+BASEDIR = Path(__file__).parent.resolve()
+
+class Config:
+    # Flask secret key (override via env if you like)
+    SECRET_KEY = os.environ.get("SECRET_KEY", "you-will-never-guess")
+
+    # SQLAlchemy / SQLite
+    SQLALCHEMY_DATABASE_URI = os.environ.get(
+        "DATABASE_URL",
+        f"sqlite:///{BASEDIR / 'app.db'}"
+    )
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Celery / Redis (we’ll wire up Redis later)
+    CELERY_BROKER_URL     = os.environ.get(
+        "CELERY_BROKER_URL",
+        "redis://default:fkivQ9kWg3Xnh9RDe9A6lbtBLnjlCk5Y@redis-17629.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:17629/0"
+    )
+    CELERY_RESULT_BACKEND = os.environ.get(
+        "CELERY_RESULT_BACKEND",
+        "redis://default:fkivQ9kWg3Xnh9RDe9A6lbtBLnjlCk5Y@redis-17629.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:17629/1"
+    )
+
+    # Mail (for your monthly reports)
+    MAIL_SERVER   = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
+    MAIL_PORT     = int(os.environ.get("MAIL_PORT", 587))
+    MAIL_USE_TLS  = True
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
