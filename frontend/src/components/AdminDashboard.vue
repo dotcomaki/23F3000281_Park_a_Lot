@@ -74,6 +74,72 @@
       <p v-else-if="!loadingUsers" class="mt-4">No users found.</p>
     </div>
 
+    <!-- Search View -->
+    <div v-else-if="activeTab === 'search'">
+      <h3>Search</h3>
+      <div class="row g-2 align-items-center mb-3">
+        <!-- Dropdown for "Search by" -->
+        <div class="col-md-3">
+          <label class="form-label">Search by</label>
+          <select
+            v-model="searchBy"
+            class="form-select"
+          >
+            <option value="user_id">User ID</option>
+            <option value="lot_name">Parking Lot Name</option>
+            <option value="spot_location">Spot Location (Address/Pin)</option>
+            <option value="reservation_id">Reservation ID</option>
+            <!-- Add more options as needed -->
+          </select>
+        </div>
+        <!-- Text input for search string -->
+        <div class="col-md-5">
+          <label class="form-label">Search term</label>
+          <input
+            v-model.trim="searchValue"
+            class="form-control"
+            placeholder="Enter search term"
+          />
+        </div>
+        <!-- Button to trigger search -->
+        <div class="col-md-2">
+          <label class="form-label">&nbsp;</label>
+          <button
+            class="btn btn-primary w-100"
+            :disabled="!searchValue.trim() || loadingSearch"
+            @click="performSearch"
+          >
+            {{ loadingSearch ? 'Searching…' : 'Search' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Display search results -->
+      <div v-if="searchError" class="alert alert-danger">{{ searchError }}</div>
+
+      <div v-if="loadingSearch" class="text-center my-3">
+        <div class="spinner-border" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+
+      <table v-if="searchResults.length && !loadingSearch" class="table table-bordered">
+        <thead>
+          <tr>
+            <th v-for="header in searchHeaders" :key="header">{{ header }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(row, index) in searchResults" :key="index">
+            <td v-for="header in searchHeaders" :key="header">
+              {{ row[header] }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-else-if="!loadingSearch && !searchError" class="mt-4">No results found.</p>
+    </div>
+
     <!-- Edit Profile Form -->
     <div v-else-if="activeTab === 'profile'" class="card p-4 mb-4">
       <h5>Edit Profile</h5>
@@ -355,6 +421,13 @@ export default {
       loadingUsers: false,
       errorUsers: '',
 
+      // For search view
+      searchBy: 'user_id',
+      searchValue: '',
+      searchResults: [],
+      loadingSearch: false,
+      searchError: '',
+
       // For lots management
       lots: [],
       loading: false,
@@ -422,6 +495,11 @@ export default {
         confirmValid = this.profile.password === this.profile.confirmPassword
       }
       return usernameValid && emailValid && passwordValid && confirmValid
+    },
+    // Compute headers for searchResults table
+    searchHeaders() {
+      if (!this.searchResults.length) return []
+      return Object.keys(this.searchResults[0])
     }
   },
   async mounted() {
@@ -435,8 +513,11 @@ export default {
         this.fetchUsers()
       } else if (tab === 'home') {
         this.fetchLots()
+      } else if (tab === 'search') {
+        this.searchResults = []
+        this.searchError = ''
+        this.searchValue = ''
       }
-      // You can add fetch calls for other tabs when needed
     },
 
     // Fetch all users for Users view
@@ -450,6 +531,28 @@ export default {
         this.errorUsers = e.response?.data?.error || 'Failed to load users'
       } finally {
         this.loadingUsers = false
+      }
+    },
+
+    // Perform search based on selected criteria
+    async performSearch() {
+      if (!this.searchValue.trim()) return
+      this.loadingSearch = true
+      this.searchError = ''
+      this.searchResults = []
+      try {
+        // Example endpoint: /admin/search?by=user_id&q=123
+        const resp = await axios.get('/admin/search', {
+          params: {
+            by: this.searchBy,
+            q: this.searchValue.trim()
+          }
+        })
+        this.searchResults = resp.data
+      } catch (e) {
+        this.searchError = e.response?.data?.error || 'Search failed'
+      } finally {
+        this.loadingSearch = false
       }
     },
 

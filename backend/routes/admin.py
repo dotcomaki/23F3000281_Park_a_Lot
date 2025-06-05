@@ -131,3 +131,101 @@ def list_users():
             'registered_at': u.registered_at.isoformat() if u.registered_at else None
         })
     return jsonify(payload)
+
+from ..models import Reservation
+
+@bp.route('/search', methods=['GET'])
+@admin_only
+def search():
+    """
+    General search for:
+      - user_id: returns reservations for that user
+      - lot_name: returns parking lots matching name
+      - spot_location: returns spots matching address or pincode
+      - reservation_id: returns specific reservation
+    Query parameters:
+      by: one of 'user_id','lot_name','spot_location','reservation_id'
+      q: the search string
+    """
+    by = request.args.get('by', '').strip()
+    q = request.args.get('q', '').strip()
+
+    if not by or not q:
+        return jsonify({'error': 'Missing search parameters'}), 400
+
+    results = []
+
+    try:
+        if by == 'user_id':
+            # find reservations for given user_id
+            user_id = int(q)
+            reservations = Reservation.query.filter_by(user_id=user_id).all()
+            for r in reservations:
+                lot = r.spot.lot
+                results.append({
+                    'reservation_id': r.id,
+                    'user_id': r.user_id,
+                    'username': r.user.username,
+                    'spot_id': r.spot_id,
+                    'lot_id': lot.id,
+                    'lot_name': lot.prime_location_name,
+                    'parked_at': r.parked_at.isoformat() if r.parked_at else None,
+                    'left_at': r.left_at.isoformat() if r.left_at else None,
+                    'parking_cost': r.parking_cost
+                })
+
+        elif by == 'lot_name':
+            # search lots by name substring (case-insensitive)
+            lots = ParkingLot.query.filter(ParkingLot.prime_location_name.ilike(f"%{q}%")).all()
+            for lot in lots:
+                available = sum(1 for s in lot.spots if s.status == "A")
+                results.append({
+                    'lot_id': lot.id,
+                    'lot_name': lot.prime_location_name,
+                    'address': lot.address,
+                    'pincode': lot.pincode,
+                    'total_spots': lot.total_spots,
+                    'available_spots': available
+                })
+
+        elif by == 'spot_location':
+            # search spots by lot address or pincode substring
+            spots = ParkingSpot.query.join(ParkingLot).filter(
+                (ParkingLot.address.ilike(f"%{q}%")) |
+                (ParkingLot.pincode.ilike(f"%{q}%"))
+            ).all()
+            for s in spots:
+                lot = s.lot
+                results.append({
+                    'spot_id': s.id,
+                    'lot_id': lot.id,
+                    'lot_name': lot.prime_location_name,
+                    'status': s.status,
+                    'address': lot.address,
+                    'pincode': lot.pincode
+                })
+
+        elif by == 'reservation_id':
+            # specific reservation by id
+            res_id = int(q)
+            r = Reservation.query.get(res_id)
+            if r:
+                lot = r.spot.lot
+                results.append({
+                    'reservation_id': r.id,
+                    'user_id': r.user_id,
+                    'username': r.user.username,
+                    'spot_id': r.spot_id,
+                    'lot_id': lot.id,
+                    'lot_name': lot.prime_location_name,
+                    'parked_at': r.parked_at.isoformat() if r.parked_at else None,
+                    'left_at': r.left_at.isoformat() if r.left_at else None,
+                    'parking_cost': r.parking_cost
+                })
+        else:
+            return jsonify({'error': 'Invalid search category'}), 400
+
+    except ValueError:
+        return jsonify({'error': 'Invalid search value'}), 400
+
+    return jsonify(results), 200
