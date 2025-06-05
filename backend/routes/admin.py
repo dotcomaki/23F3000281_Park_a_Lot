@@ -3,9 +3,9 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from ..app      import db
-from ..models   import ParkingLot, ParkingSpot
+from ..models   import ParkingLot, ParkingSpot, User
 
-bp = Blueprint("admin", __name__)
+bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 def admin_only(fn):
     """Decorator: only allow role=='admin'."""
@@ -116,3 +116,18 @@ def delete_spot(spot_id):
     db.session.delete(spot)
     db.session.commit()
     return jsonify({"message":"spot deleted"}), 200
+
+@bp.route('/users', methods=['GET'])
+@admin_only
+def list_users():
+    users = User.query.all()
+    payload = []
+    for u in users:
+        payload.append({
+            'id': u.id,
+            'username': u.username,
+            'email': u.email,
+            'role': u.role,
+            'registered_at': u.registered_at.isoformat() if u.registered_at else None
+        })
+    return jsonify(payload)
