@@ -2,6 +2,7 @@
 
 from flask import Blueprint, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash
 from ..app    import db
 from ..models import User
 
@@ -50,3 +51,47 @@ def me():
         "email": current_user.email,
         "role": current_user.role
     }), 200
+
+
+# Update profile route
+@bp.route("/profile", methods=["PUT"])
+@login_required
+def update_profile():
+    """
+    Updates current user's username, email, and optional password.
+    """
+    data = request.get_json() or {}
+
+    username = data.get("username", "").strip()
+    email = data.get("email", "").strip()
+    new_password = data.get("password", "")
+
+    # Validate username
+    if not username or len(username) < 3:
+        return jsonify({"error": "Username must be at least 3 characters."}), 400
+
+    # Validate email
+    if not email or "@" not in email:
+        return jsonify({"error": "A valid email is required."}), 400
+
+    # Check for username/email uniqueness (excluding current user)
+    existing = User.query.filter(User.id != current_user.id, User.username == username).first()
+    if existing:
+        return jsonify({"error": "Username already taken."}), 409
+
+    existing = User.query.filter(User.id != current_user.id, User.email == email).first()
+    if existing:
+        return jsonify({"error": "Email already registered."}), 409
+
+    # If password provided, validate length and update
+    if new_password:
+        if len(new_password) < 8:
+            return jsonify({"error": "Password must be at least 8 characters."}), 400
+        current_user.password_hash = generate_password_hash(new_password)
+
+    # Update username and email
+    current_user.username = username
+    current_user.email = email
+
+    db.session.commit()
+    return jsonify({"message": "Profile updated successfully."}), 200
