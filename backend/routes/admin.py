@@ -79,6 +79,25 @@ def update_lot(lot_id):
     db.session.commit()
     return jsonify({"message":"lot updated"}), 200
 
+# GET full lot details (including spots)
+@bp.route("/lots/<int:lot_id>", methods=["GET"])
+@login_required
+@admin_only
+def get_lot(lot_id):
+    """
+    Return full details for a parking lot, including spot statuses.
+    """
+    lot = ParkingLot.query.get_or_404(lot_id)
+    spots = lot.spots
+    result = {
+        "id": lot.id,
+        "prime_location_name": lot.prime_location_name,
+        "total_spots": lot.total_spots,
+        "available_spots": sum(1 for s in spots if s.status == "A"),
+        "spots": [{"id": s.id, "status": s.status} for s in spots]
+    }
+    return jsonify(result), 200
+
 @bp.route("/lots/<int:lot_id>", methods=["DELETE"])
 @login_required
 @admin_only

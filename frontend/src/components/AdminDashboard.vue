@@ -375,13 +375,17 @@
             <td>{{ lot.available_spots }}</td>
             <td>
               <button
-                class="btn btn-sm btn-danger me-1"
-                @click="deleteLot(lot.id)"
-              >Delete</button>
+                class="btn btn-sm btn-info me-1"
+                @click.prevent="viewLot(lot)"
+              >View</button>
               <button
-                class="btn btn-sm btn-secondary"
-                @click="startEdit(lot)"
+                class="btn btn-sm btn-secondary me-1"
+                @click.prevent="startEdit(lot)"
               >Edit</button>
+              <button
+                class="btn btn-sm btn-danger"
+                @click.prevent="deleteLot(lot.id)"
+              >Delete</button>
             </td>
           </tr>
         </tbody>
@@ -389,6 +393,40 @@
 
       <div v-else-if="!loading" class="mt-4">
         <p>No parking lots found.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Lot Modal -->
+  <div
+    v-if="selectedLot"
+    class="modal fade show"
+    style="display: block; background: rgba(0, 0, 0, 0.5);"
+  >
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            {{ selectedLot.prime_location_name || ('Parking#' + selectedLot.id) }}
+          </h5>
+          <button type="button" class="btn-close" @click="selectedLot = null"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-center text-success">
+            (Occupied: {{ selectedLot.total_spots - selectedLot.available_spots }}/{{ selectedLot.total_spots }})
+          </p>
+          <hr>
+          <div class="d-flex flex-wrap" style="gap: 8px; justify-content:center;">
+            <div
+              v-for="spot in selectedLot.spots"
+              :key="spot.id"
+              class="spot-box"
+              :class="spot.status === 'A' ? 'available' : 'occupied'"
+            >
+              {{ spot.status }}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -431,6 +469,7 @@ export default {
       editing: null,
       newLotTouched: { name: false, price: false, spots: false },
       editingTouched: { name: false, price: false },
+      selectedLot: null,
 
       // For profile editing
       profile: {
@@ -686,6 +725,18 @@ export default {
       } catch (e) {
         alert(e.response?.data?.error || 'Delete failed')
       }
+    },  // end deleteLot
+
+    /**
+     * Fetch and show details for a lot, including spot statuses.
+     */
+    async viewLot(lot) {
+      try {
+        const resp = await axios.get(`/admin/lots/${lot.id}`);
+        this.selectedLot = resp.data;
+      } catch (e) {
+        alert('Failed to load lot details');
+      }
     }
   }
 }
@@ -693,4 +744,20 @@ export default {
 
 <style scoped>
 /* component-specific styles, if needed */
+.spot-box {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #0d6efd; /* bootstrap primary color */
+  border-radius: 4px;
+  font-weight: bold;
+}
+.spot-box.available {
+  background-color: #d4edda; /* light green */
+}
+.spot-box.occupied {
+  background-color: #f8d7da; /* light red */
+}
 </style>
