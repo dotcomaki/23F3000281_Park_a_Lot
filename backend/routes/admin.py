@@ -76,21 +76,6 @@ def update_lot(lot_id):
         lot.address = data["address"]
     if "pincode" in data:
         lot.pincode = data["pincode"]
-    # adjust spot count
-    if "total_spots" in data:
-        new_total = int(data["total_spots"])
-        diff = new_total - lot.total_spots
-        if diff > 0:
-            for _ in range(diff):
-                db.session.add(ParkingSpot(lot_id=lot.id))
-        elif diff < 0:
-            # remove only available spots
-            empties = ParkingSpot.query.filter_by(lot_id=lot.id, status="A").limit(-diff).all()
-            if len(empties) < -diff:
-                return jsonify({"error":"not enough free spots to remove"}), 400
-            for spot in empties:
-                db.session.delete(spot)
-        lot.total_spots = new_total
     db.session.commit()
     return jsonify({"message":"lot updated"}), 200
 

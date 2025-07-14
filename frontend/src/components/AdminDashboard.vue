@@ -321,18 +321,6 @@
             </div>
             <div class="col-md-2">
               <input
-                v-model.number="editing.total_spots"
-                @blur="editingTouched.spots = true"
-                type="number"
-                :class="{ 'form-control': true, 'is-invalid': editingTouched.spots && editing.total_spots < 1 }"
-                placeholder="Spots"
-                min="1"
-                required
-              />
-              <div class="invalid-feedback">At least one spot is required.</div>
-            </div>
-            <div class="col-md-2">
-              <input
                 v-model.trim="editing.address"
                 class="form-control"
                 placeholder="Address"
@@ -442,7 +430,7 @@ export default {
       formError: '',
       editing: null,
       newLotTouched: { name: false, price: false, spots: false },
-      editingTouched: { name: false, price: false, spots: false },
+      editingTouched: { name: false, price: false },
 
       // For profile editing
       profile: {
@@ -476,8 +464,7 @@ export default {
       return (
         this.editing &&
         this.editing.name.trim() !== '' &&
-        this.editing.price_per_hour > 0 &&
-        this.editing.total_spots >= 1
+        this.editing.price_per_hour > 0
       )
     },
     // Validation for profile form
@@ -671,15 +658,14 @@ export default {
       this.editing = null
     },
     async submitEdit() {
-      this.editingTouched = { name: true, price: true, spots: true }
+      this.editingTouched = { name: true, price: true }
       if (!this.isEditFormValid) return
 
-      const { id, name, price_per_hour, total_spots, address, pincode } = this.editing
+      const { id, name, price_per_hour, address, pincode } = this.editing
       try {
         await axios.put(`/admin/lots/${id}`, {
           name,
           price_per_hour,
-          total_spots,
           address,
           pincode
         })
