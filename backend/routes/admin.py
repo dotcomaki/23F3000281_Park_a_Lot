@@ -3,7 +3,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from ..app      import db
-from ..models   import ParkingLot, ParkingSpot, User
+from ..models   import ParkingLot, ParkingSpot, User, Reservation
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -253,3 +253,32 @@ def search():
         return jsonify({'error': 'Invalid search value'}), 400
 
     return jsonify(results), 200
+
+@bp.route('/summary', methods=['GET'])
+@login_required
+@admin_only
+def summary():
+    """
+    Return two arrays:
+      - revenue: list of { lot_name, revenue }
+      - occupancy: list of { lot_name, available, occupied }
+    """
+    lots = ParkingLot.query.all()
+    revenue = []
+    occupancy = []
+    for lot in lots:
+        # sum up all completed-parking costs
+        total_rev = sum(
+            r.parking_cost or 0
+            for spot in lot.spots
+            for r in spot.reservations
+        )
+        total = lot.total_spots
+        avail = sum(1 for s in lot.spots if s.status=='A')
+        occ = total - avail
+
+        revenue.append({ 'lot_name': lot.prime_location_name, 'revenue': total_rev })
+        occupancy.append({ 'lot_name': lot.prime_location_name,
+                           'available': avail,
+                           'occupied': occ })
+    return jsonify({ 'revenue': revenue, 'occupancy': occupancy }), 200

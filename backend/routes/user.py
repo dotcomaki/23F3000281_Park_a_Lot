@@ -3,8 +3,9 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from ..app      import db
-from ..models   import ParkingLot, ParkingSpot, Reservation
+from ..models   import ParkingLot, ParkingSpot, Reservation, db
 from datetime   import datetime
+from sqlalchemy import func
 
 bp = Blueprint("user", __name__)
 
@@ -91,3 +92,26 @@ def list_my_reservations():
             "cost": r.parking_cost
         })
     return jsonify(output), 200
+
+@bp.route('/summary', methods=['GET'])
+@login_required
+def user_summary():
+    """
+    Return total number of reservations and total spent for current user.
+    """
+    # 1) total reservations (all, regardless of completed or not)
+    total_resv = Reservation.query.filter_by(user_id=current_user.id).count()
+    # 2) total spent: sum up parking_cost on any reservation where cost is set
+    total_spent = (
+        db.session.query(func.coalesce(func.sum(Reservation.parking_cost), 0))
+        .filter(
+            Reservation.user_id == current_user.id,
+            Reservation.parking_cost != None
+        )
+        .scalar()
+    )
+    # ensure it’s a float for JSON
+    return jsonify({
+        'total_reservations': total_resv,
+        'total_spent': float(total_spent)
+    }), 200

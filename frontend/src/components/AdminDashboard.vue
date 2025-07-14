@@ -225,8 +225,21 @@
       </form>
     </div>
 
+    <!-- Summary View -->
+    <div v-else-if="activeTab === 'summary'">
+      <h3>Summary</h3>
+      <div class="row">
+        <div class="col-md-6">
+          <canvas id="revenueChart"></canvas>
+        </div>
+        <div class="col-md-6">
+          <canvas id="occupancyChart"></canvas>
+        </div>
+      </div>
+    </div>
+
     <!-- Main Dashboard: Create/Lots Management (Home Tab) -->
-    <div v-else>
+    <div v-else-if="activeTab === 'home'">
       <h2>Admin Dashboard</h2>
 
       <!-- Create Lot Form -->
@@ -457,6 +470,7 @@
 
 <script>
 import axios from 'axios'
+import Chart from 'chart.js/auto'
 
 export default {
   name: 'AdminDashboard',
@@ -497,6 +511,10 @@ export default {
       // For spot details modal
       spotDetails: null,
       showSpotModal: false,
+
+      // Summary data and chart instances
+      summaryData: { revenue: [], occupancy: [] },
+      summaryCharts: { revenue: null, occupancy: null },
 
       // For profile editing
       profile: {
@@ -570,6 +588,8 @@ export default {
         this.searchResults = []
         this.searchError = ''
         this.searchValue = ''
+      } else if (tab === 'summary') {
+        this.fetchSummary()
       }
     },
 
@@ -777,7 +797,62 @@ export default {
       } catch (e) {
         alert(e.response?.data?.error || 'Failed to load spot details');
       }
-    }
+    },
+
+    /**
+     * Load summary data for charts.
+     */
+    async fetchSummary() {
+      try {
+        const resp = await axios.get('/admin/summary')
+        this.summaryData = resp.data
+        this.$nextTick(() => this.renderCharts())
+      } catch {
+        alert('Failed to load summary')
+      }
+    },
+
+    /**
+     * Render Chart.js charts for revenue and occupancy.
+     */
+    renderCharts() {
+      // destroy existing charts, if any
+      if (this.summaryCharts.revenue) this.summaryCharts.revenue.destroy()
+      if (this.summaryCharts.occupancy) this.summaryCharts.occupancy.destroy()
+
+      // Revenue doughnut
+      const revCtx = document.getElementById('revenueChart').getContext('2d')
+      this.summaryCharts.revenue = new Chart(revCtx, {
+        type: 'doughnut',
+        data: {
+          labels: this.summaryData.revenue.map(r => r.lot_name),
+          datasets: [{
+            data: this.summaryData.revenue.map(r => r.revenue)
+          }]
+        },
+        options: {
+          plugins: { title: { display: true, text: 'Revenue by Parking Lot' } }
+        }
+      })
+
+      // Occupancy bar chart
+      const occCtx = document.getElementById('occupancyChart').getContext('2d')
+      this.summaryCharts.occupancy = new Chart(occCtx, {
+        type: 'bar',
+        data: {
+          labels: this.summaryData.occupancy.map(o => o.lot_name),
+          datasets: [
+            { label: 'Available', data: this.summaryData.occupancy.map(o => o.available) },
+            { label: 'Occupied', data: this.summaryData.occupancy.map(o => o.occupied) }
+          ]
+        },
+        options: {
+          plugins: { title: { display: true, text: 'Available vs Occupied Spots' } },
+          responsive: true,
+          scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+        }
+      })
+    },
   }
 }
 </script>
