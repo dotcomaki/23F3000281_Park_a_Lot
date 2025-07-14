@@ -422,10 +422,33 @@
               :key="spot.id"
               class="spot-box"
               :class="spot.status === 'A' ? 'available' : 'occupied'"
+              @click="spot.status === 'O' && viewSpot(spot.id)"
+              style="cursor: pointer;"
             >
               {{ spot.status }}
             </div>
           </div>
+  <!-- Spot Details Modal -->
+  <div
+    v-if="showSpotModal"
+    class="modal fade show"
+    style="display: block; background: rgba(0,0,0,0.5);"
+  >
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Reservation ID {{ spotDetails.reservation_id }} Details</h5>
+          <button type="button" class="btn-close" @click="showSpotModal = false; spotDetails = null;"></button>
+        </div>
+        <div class="modal-body">
+          <p><strong>User:</strong> {{ spotDetails.username }} (ID: {{ spotDetails.user_id }})</p>
+          <p><strong>Email:</strong> {{ spotDetails.email }}</p>
+          <p><strong>Parked At:</strong> {{ spotDetails.parked_at }}</p>
+          <p><strong>Cost:</strong> {{ spotDetails.parking_cost }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
         </div>
       </div>
     </div>
@@ -470,6 +493,10 @@ export default {
       newLotTouched: { name: false, price: false, spots: false },
       editingTouched: { name: false, price: false },
       selectedLot: null,
+
+      // For spot details modal
+      spotDetails: null,
+      showSpotModal: false,
 
       // For profile editing
       profile: {
@@ -736,6 +763,19 @@ export default {
         this.selectedLot = resp.data;
       } catch (e) {
         alert('Failed to load lot details');
+      }
+    },
+
+    /**
+     * Fetch reservation/user details for an occupied spot.
+     */
+    async viewSpot(spotId) {
+      try {
+        const resp = await axios.get(`/admin/spots/${spotId}`);
+        this.spotDetails = resp.data;
+        this.showSpotModal = true;
+      } catch (e) {
+        alert(e.response?.data?.error || 'Failed to load spot details');
       }
     }
   }

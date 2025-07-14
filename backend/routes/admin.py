@@ -138,6 +138,26 @@ def list_users():
 
 from ..models import Reservation
 
+@bp.route('/spots/<int:spot_id>', methods=['GET'])
+@login_required
+@admin_only
+def get_spot(spot_id):
+    """
+    Return the active reservation details for a spot, if occupied.
+    """
+    reservation = Reservation.query.filter_by(spot_id=spot_id, left_at=None).first()
+    if not reservation:
+        return jsonify({'error': 'Spot is not currently occupied'}), 404
+    user = reservation.user
+    return jsonify({
+        'reservation_id': reservation.id,
+        'user_id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'parked_at': reservation.parked_at.isoformat(),
+        'parking_cost': reservation.parking_cost
+    }), 200
+
 @bp.route('/search', methods=['GET'])
 @admin_only
 def search():
