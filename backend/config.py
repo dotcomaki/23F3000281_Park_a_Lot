@@ -25,12 +25,10 @@ class Config:
         "redis://default:fkivQ9kWg3Xnh9RDe9A6lbtBLnjlCk5Y@redis-17629.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:17629/1"
     )
 
-    # Mail (for your monthly reports)
-    MAIL_SERVER   = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
-    MAIL_PORT     = int(os.environ.get("MAIL_PORT", 587))
-    MAIL_USE_TLS  = True
-    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
-    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+   # URL for Google Chat incoming webhook
+    GOOGLE_CHAT_WEBHOOK_URL = os.environ.get("GOOGLE_CHAT_WEBHOOK_URL",
+       "https://chat.googleapis.com/v1/spaces/AAQAVvLThTU/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=X1BBEf2iwPEJmSqOrBi8lSybsbPHZl6dxHGvXDGE38E"
+    )
 
     # Flask-Caching configuration
     # Type of cache to use (e.g., 'redis' or 'simple')

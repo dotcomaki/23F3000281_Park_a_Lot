@@ -1,38 +1,11 @@
 # backend/tasks.py
 
-from celery import Celery
-from celery.schedules import crontab
+from .celery_app import celery
 from .config import Config
 from .extensions import db
 from .models import User, Reservation
-from datetime import datetime
-from flask_mail import Message, Mail
-
-# Initialize Celery
-celery = Celery(
-    __name__,
-    broker=Config.CELERY_BROKER_URL,
-    backend=Config.CELERY_RESULT_BACKEND
-)
-celery.conf.update(
-    result_expires=3600,
-    timezone="Asia/Kolkata",
-    beat_schedule={
-        # Daily reminder at 18:00 Asia/Kolkata
-        'daily-reminder': {
-            'task': 'backend.tasks.send_daily_reminder',
-            'schedule': crontab(hour=18, minute=0),
-        },
-        # Monthly activity report on the 1st at 00:05
-        'monthly-report': {
-            'task': 'backend.tasks.send_monthly_report',
-            'schedule': crontab(day_of_month=1, hour=0, minute=5),
-        },
-    }
-)
-
-# Set up Flask-Mail (Mail instance should be init_app in your create_app)
-mail = Mail()
+from datetime import datetime, date
+import requests
 
 @celery.task
 def ping():
@@ -44,42 +17,33 @@ def send_daily_reminder():
     """
     Send daily reminder to users who haven't reserved today.
     """
-    # We need application context to query and send mail
-    from backend.app import create_app
-    app = create_app()
-    mail.init_app(app)
-    with app.app_context():
-        today = datetime.utcnow().date()
-        users = User.query.all()
-        for user in users:
-            # skip admin
-            if user.role == 'admin':
-                continue
-            # check if user has a reservation today
-            has_today = Reservation.query.filter(
-                Reservation.user_id == user.id,
-                db.func.date(Reservation.parked_at) == today
-            ).first()
-            if not has_today:
-                msg = Message(
-                    'Daily Parking Reminder',
-                    recipients=[user.email]
-                )
-                msg.body = (
-                    "You haven't booked a parking spot today. "
-                    "Log in to reserve if needed."
-                )
-                mail.send(msg)
+    webhook = Config.GOOGLE_CHAT_WEBHOOK_URL
+    today = date.today()
+    # Collect IDs of users who reserved today
+    done_ids = {
+        r.user_id
+        for r in Reservation.query.filter(
+            db.func.date(Reservation.parked_at) == today
+        ).all()
+    }
+    # Notify each non-admin user who hasn't reserved today
+    for user in User.query.filter(User.role != 'admin'):
+        if user.id in done_ids:
+            continue
+        text = (
+            f"Hi {user.username}! You haven’t parked today. "
+            "If you need a spot, please book one now: https://your-app-url/"
+        )
+        payload = { "text": text }
+        try:
+            requests.post(webhook, json=payload, timeout=5)
+        except Exception as e:
+            print(f"Failed to send chat reminder to {user.username}: {e}")
 
 @celery.task
 def send_monthly_report():
     """
-    Generate and email monthly activity report to users.
+    Generate and send monthly report via Google Chat or other channel.
     """
-    from backend.app import create_app
-    app = create_app()
-    mail.init_app(app)
-    with app.app_context():
-        # Implement report generation here
-        # For each non-admin user, compile stats and send email
-        pass
+    # TODO: implement monthly report logic
+    pass
