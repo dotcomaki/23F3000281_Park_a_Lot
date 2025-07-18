@@ -15,14 +15,14 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Celery / Redis (we’ll wire up Redis later)
-    CELERY_BROKER_URL     = os.environ.get(
+    # Use local Redis for Celery broker and results by default
+    CELERY_BROKER_URL = os.environ.get(
         "CELERY_BROKER_URL",
-        "redis://default:fkivQ9kWg3Xnh9RDe9A6lbtBLnjlCk5Y@redis-17629.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:17629/0"
+        "redis://localhost:6379/0"
     )
     CELERY_RESULT_BACKEND = os.environ.get(
         "CELERY_RESULT_BACKEND",
-        "redis://default:fkivQ9kWg3Xnh9RDe9A6lbtBLnjlCk5Y@redis-17629.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:17629/1"
+        "redis://localhost:6379/1"
     )
 
    # URL for Google Chat incoming webhook
