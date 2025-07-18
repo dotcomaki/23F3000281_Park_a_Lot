@@ -4,3 +4,4 @@ Flask-SQLAlchemy
 redis
 celery
 flask-mail
+Flask-Caching

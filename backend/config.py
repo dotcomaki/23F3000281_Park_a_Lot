@@ -31,3 +31,11 @@ class Config:
     MAIL_USE_TLS  = True
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+
+    # Flask-Caching configuration
+    # Type of cache to use (e.g., 'redis' or 'simple')
+    CACHE_TYPE = os.environ.get("CACHE_TYPE", "redis")
+    # Redis server URL for caching (defaults to Celery broker Redis)
+    CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL", "redis://localhost:6379/0")
+    # Default timeout (in seconds) for cached values
+    CACHE_DEFAULT_TIMEOUT = int(os.environ.get("CACHE_DEFAULT_TIMEOUT", 60))

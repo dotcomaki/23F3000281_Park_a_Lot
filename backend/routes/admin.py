@@ -4,6 +4,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from ..app      import db
 from ..models   import ParkingLot, ParkingSpot, User, Reservation
+from ..extensions import cache
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -18,6 +19,7 @@ def admin_only(fn):
     return wrapper
 
 @bp.route("/lots", methods=["GET"])
+@cache.cached(timeout=60, key_prefix="admin_list_lots")
 @login_required
 @admin_only
 def list_lots():
@@ -59,6 +61,10 @@ def create_lot():
     for _ in range(lot.total_spots):
         db.session.add(ParkingSpot(lot_id=lot.id))
     db.session.commit()
+    # Invalidate caches
+    cache.delete('admin_list_lots')
+    cache.delete('admin_summary')
+    cache.delete_memoized(get_lot, lot.id)
     return jsonify({"message":"lot created","lot_id":lot.id}), 201
 
 @bp.route("/lots/<int:lot_id>", methods=["PUT"])
@@ -77,10 +83,15 @@ def update_lot(lot_id):
     if "pincode" in data:
         lot.pincode = data["pincode"]
     db.session.commit()
+    # Invalidate caches
+    cache.delete('admin_list_lots')
+    cache.delete('admin_summary')
+    cache.delete_memoized(get_lot, lot_id)
     return jsonify({"message":"lot updated"}), 200
 
 # GET full lot details (including spots)
 @bp.route("/lots/<int:lot_id>", methods=["GET"])
+@cache.memoize(timeout=30)
 @login_required
 @admin_only
 def get_lot(lot_id):
@@ -108,6 +119,10 @@ def delete_lot(lot_id):
         return jsonify({"error":"cannot delete: spots occupied"}), 400
     db.session.delete(lot)
     db.session.commit()
+    # Invalidate caches
+    cache.delete('admin_list_lots')
+    cache.delete('admin_summary')
+    cache.delete_memoized(get_lot, lot_id)
     return jsonify({"message":"lot deleted"}), 200
 
 @bp.route("/spots/<int:spot_id>", methods=["DELETE"])
@@ -115,13 +130,19 @@ def delete_lot(lot_id):
 @admin_only
 def delete_spot(spot_id):
     spot = ParkingSpot.query.get_or_404(spot_id)
+    lot_id = spot.lot_id
     if spot.status != "A":
         return jsonify({"error":"cannot delete occupied spot"}), 400
     db.session.delete(spot)
     db.session.commit()
+    # Invalidate caches
+    cache.delete('admin_list_lots')
+    cache.delete('admin_summary')
+    cache.delete_memoized(get_lot, lot_id)
     return jsonify({"message":"spot deleted"}), 200
 
 @bp.route('/users', methods=['GET'])
+@cache.cached(timeout=60, key_prefix="admin_list_users")
 @admin_only
 def list_users():
     users = User.query.all()
@@ -255,6 +276,7 @@ def search():
     return jsonify(results), 200
 
 @bp.route('/summary', methods=['GET'])
+@cache.cached(timeout=60, key_prefix="admin_summary")
 @login_required
 @admin_only
 def summary():

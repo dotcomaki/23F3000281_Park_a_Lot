@@ -1,16 +1,17 @@
 # backend/routes/user.py
 
 from flask import Blueprint, request, jsonify
-from flask_login import login_required, current_user
-from ..app      import db
-from ..models   import ParkingLot, ParkingSpot, Reservation, db
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from ..extensions import db, cache
+from ..models   import ParkingLot, ParkingSpot, Reservation
 from datetime   import datetime
 from sqlalchemy import func
 
 bp = Blueprint("user", __name__)
 
 @bp.route("/lots", methods=["GET"])
-@login_required
+@jwt_required()
+@cache.cached(timeout=60, key_prefix="user_list_lots")
 def list_lots():
     """Return all lots with count of available spots."""
     lots = ParkingLot.query.all()
@@ -26,7 +27,7 @@ def list_lots():
     return jsonify(result), 200
 
 @bp.route("/reservations", methods=["POST"])
-@login_required
+@jwt_required()
 def create_reservation():
     """
     Book first available spot in given lot.
@@ -42,11 +43,14 @@ def create_reservation():
     spot.status = "O"
     resv = Reservation(
         spot_id=spot.id,
-        user_id=current_user.id,
+        user_id=get_jwt_identity(),
         parked_at=datetime.utcnow()
     )
     db.session.add(resv)
     db.session.commit()
+    # Invalidate caches
+    cache.delete('user_list_lots')
+    cache.delete('user_summary')
 
     return jsonify({
         "message": "spot booked",
@@ -56,19 +60,23 @@ def create_reservation():
     }), 201
 
 @bp.route("/reservations/<int:resv_id>/release", methods=["POST"])
-@login_required
+@jwt_required()
 def release_reservation(resv_id):
     """
     Release a booked spot.
     """
     resv = Reservation.query.get_or_404(resv_id)
-    if resv.user_id != current_user.id or resv.left_at:
+    uid = get_jwt_identity()
+    if resv.user_id != uid or resv.left_at:
         return jsonify({"error":"invalid reservation"}), 400
 
     resv.left_at = datetime.utcnow()
     resv.calculate_cost()
     resv.spot.status = "A"
     db.session.commit()
+    # Invalidate caches
+    cache.delete('user_list_lots')
+    cache.delete('user_summary')
 
     return jsonify({
         "message": "spot released",
@@ -77,10 +85,11 @@ def release_reservation(resv_id):
     }), 200
 
 @bp.route("/reservations", methods=["GET"])
-@login_required
+@jwt_required()
 def list_my_reservations():
     """List all your reservations."""
-    resvs = Reservation.query.filter_by(user_id=current_user.id).all()
+    uid = get_jwt_identity()
+    resvs = Reservation.query.filter_by(user_id=uid).all()
     output = []
     for r in resvs:
         output.append({
@@ -94,18 +103,20 @@ def list_my_reservations():
     return jsonify(output), 200
 
 @bp.route('/summary', methods=['GET'])
-@login_required
+@jwt_required()
+@cache.cached(timeout=60, key_prefix="user_summary")
 def user_summary():
     """
     Return total number of reservations and total spent for current user.
     """
+    uid = get_jwt_identity()
     # 1) total reservations (all, regardless of completed or not)
-    total_resv = Reservation.query.filter_by(user_id=current_user.id).count()
+    total_resv = Reservation.query.filter_by(user_id=uid).count()
     # 2) total spent: sum up parking_cost on any reservation where cost is set
     total_spent = (
         db.session.query(func.coalesce(func.sum(Reservation.parking_cost), 0))
         .filter(
-            Reservation.user_id == current_user.id,
+            Reservation.user_id == uid,
             Reservation.parking_cost != None
         )
         .scalar()
