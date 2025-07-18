@@ -187,7 +187,7 @@ export default {
       this.loadingResv = true
       this.errorResv = ''
       try {
-        const resp = await axios.get('/user/reservations')
+        const resp = await this.$axios.get('/user/reservations');
         this.reservations = resp.data
       } catch (e) {
         this.errorResv = e.response?.data?.error || 'Failed to load reservations'

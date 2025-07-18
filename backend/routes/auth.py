@@ -1,7 +1,8 @@
 # backend/routes/auth.py
 
 from flask import Blueprint, request, jsonify
-from flask_login import login_user, logout_user, login_required, current_user
+from flask_login import current_user
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from werkzeug.security import generate_password_hash
 from ..app    import db
 from ..models import User
@@ -29,38 +30,50 @@ def register():
 @bp.route("/login", methods=["POST"])
 def login():
     data = request.get_json() or {}
-    user = User.query.filter_by(username=data.get("username")).first()
-    if user is None or not user.check_password(data.get("password","")):
-        return jsonify({"error":"invalid credentials"}), 401
+    username = data.get("username") or ""
+    password = data.get("password") or ""
 
-    login_user(user)
-    return jsonify({"message":"logged in", "role": user.role}), 200
+    user = User.query.filter_by(username=username).first()
+    if user is None or not user.check_password(password):
+        return jsonify({"error": "invalid credentials"}), 401
+
+    # Issue a JWT instead of using Flask-Login sessions
+    access_token = create_access_token(identity=user.id)
+    return jsonify({
+        "access_token": access_token,
+        "role": user.role
+    }), 200
 
 @bp.route("/logout", methods=["POST"])
-@login_required
+@jwt_required()
 def logout():
-    logout_user()
     return jsonify({"message":"logged out"}), 200
 
 @bp.route("/me", methods=["GET"])
-@login_required
+@jwt_required()
 def me():
+    user_id = get_jwt_identity()
+    user = User.query.get_or_404(user_id)
     return jsonify({
-        "id": current_user.id,
-        "username": current_user.username,
-        "email": current_user.email,
-        "role": current_user.role
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "role": user.role
     }), 200
 
 
 # Update profile route
 @bp.route("/profile", methods=["PUT"])
-@login_required
+@jwt_required()
 def update_profile():
     """
     Updates current user's username, email, and optional password.
     """
     data = request.get_json() or {}
+
+    # Identify user
+    user_id = get_jwt_identity()
+    user = User.query.get_or_404(user_id)
 
     username = data.get("username", "").strip()
     email = data.get("email", "").strip()
@@ -75,11 +88,11 @@ def update_profile():
         return jsonify({"error": "A valid email is required."}), 400
 
     # Check for username/email uniqueness (excluding current user)
-    existing = User.query.filter(User.id != current_user.id, User.username == username).first()
+    existing = User.query.filter(User.id != user.id, User.username == username).first()
     if existing:
         return jsonify({"error": "Username already taken."}), 409
 
-    existing = User.query.filter(User.id != current_user.id, User.email == email).first()
+    existing = User.query.filter(User.id != user.id, User.email == email).first()
     if existing:
         return jsonify({"error": "Email already registered."}), 409
 
@@ -87,11 +100,11 @@ def update_profile():
     if new_password:
         if len(new_password) < 8:
             return jsonify({"error": "Password must be at least 8 characters."}), 400
-        current_user.password_hash = generate_password_hash(new_password)
+        user.password_hash = generate_password_hash(new_password)
 
     # Update username and email
-    current_user.username = username
-    current_user.email = email
+    user.username = username
+    user.email = email
 
     db.session.commit()
     return jsonify({"message": "Profile updated successfully."}), 200
