@@ -3,9 +3,11 @@
 from .celery_app import celery
 from .config import Config
 from .extensions import db
+from .extensions import mail
 from .models import User, Reservation
 from datetime import datetime, date
 from sqlalchemy import func
+from flask_mail import Message
 import requests
 
 @celery.task
@@ -44,13 +46,13 @@ def send_daily_reminder():
 @celery.task
 def send_monthly_report():
     """
-    Generate and send monthly report via Google Chat webhook.
+    Generate and send monthly report via email.
     """
     # Determine current month range
     today = date.today()
     first_of_month = today.replace(day=1)
 
-    # Count total reservations in current month
+    # Count & sum for the month
     total_reservations = (
         Reservation.query
         .filter(
@@ -59,8 +61,6 @@ def send_monthly_report():
         )
         .count()
     )
-
-    # Sum total parking_cost in current month
     total_spent = (
         db.session.query(func.coalesce(func.sum(Reservation.parking_cost), 0))
         .filter(
@@ -71,16 +71,27 @@ def send_monthly_report():
         .scalar()
     )
 
-    # Build message
+    # Build email content
     month_name = today.strftime("%B %Y")
-    text = (
-        f"*Monthly Parking Report — {month_name}*\n"
-        f"• Total Reservations: {total_reservations}\n"
-        f"• Total Revenue: ₹{total_spent:.2f}"
+    subject = f"Monthly Parking Report — {month_name}"
+    body = (
+        f"Hi {{username}},\n\n"
+        f"Here’s your parking summary for {month_name}:\n"
+        f"  • Total Reservations: {total_reservations}\n"
+        f"  • Total Spent: ₹{total_spent:.2f}\n\n"
+        "Thank you for using our Parking App!"
     )
-    payload = {"text": text}
-    # Send to Google Chat webhook
-    try:
-        requests.post(Config.GOOGLE_CHAT_WEBHOOK_URL, json=payload, timeout=10).raise_for_status()
-    except Exception as e:
-        print(f"[MonthlyReport] Failed to send report: {e}")
+
+    # Email each non-admin user
+    users = User.query.filter(User.role != 'admin').all()
+    for user in users:
+        msg = Message(
+            subject=subject,
+            recipients=[user.email]
+        )
+        msg.body = body.format(username=user.username)
+        try:
+            mail.send(msg)
+            print(f"[MonthlyReport] Successfully emailed report to {user.email}")
+        except Exception as e:
+            print(f"[MonthlyReport] Failed to email {user.email}: {e}")
