@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from .config import Config
-from .extensions import db, migrate, cache
+from .extensions import db, migrate, cache, mail
 
 def create_app():
     """Application factory; returns a Flask app instance."""
@@ -16,6 +16,7 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     cache.init_app(app)
+    mail.init_app(app)
     jwt = JWTManager(app)
 
     # Import models to register with SQLAlchemy

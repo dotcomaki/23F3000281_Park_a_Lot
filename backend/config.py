@@ -37,3 +37,11 @@ class Config:
     CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL", "redis://localhost:6379/0")
     # Default timeout (in seconds) for cached values
     CACHE_DEFAULT_TIMEOUT = int(os.environ.get("CACHE_DEFAULT_TIMEOUT", 60))
+
+    # Flask-Mail configuration
+    MAIL_SERVER        = os.getenv("MAIL_SERVER",   "smtp.gmail.com")
+    MAIL_PORT          = int(os.getenv("MAIL_PORT",  "587"))
+    MAIL_USE_TLS       = os.getenv("MAIL_USE_TLS",  "true").lower() in ("true","1","yes")
+    MAIL_USERNAME      = os.getenv("MAIL_USERNAME")
+    MAIL_PASSWORD      = os.getenv("MAIL_PASSWORD")
+    MAIL_DEFAULT_SENDER= os.getenv("MAIL_DEFAULT_SENDER")

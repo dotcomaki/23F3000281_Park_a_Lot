@@ -1,7 +1,7 @@
 # backend/routes/admin.py
 
 from flask import Blueprint, request, jsonify
-from flask_login import login_required, current_user
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..app      import db
 from ..models   import ParkingLot, ParkingSpot, User, Reservation
 from ..extensions import cache
@@ -13,14 +13,16 @@ def admin_only(fn):
     from functools import wraps
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != "admin":
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        if not user or user.role != "admin":
             return jsonify({"error":"forbidden"}), 403
         return fn(*args, **kwargs)
     return wrapper
 
 @bp.route("/lots", methods=["GET"])
 @cache.cached(timeout=60, key_prefix="admin_list_lots")
-@login_required
+@jwt_required()
 @admin_only
 def list_lots():
     lots = ParkingLot.query.all()
@@ -39,7 +41,7 @@ def list_lots():
     return jsonify(data), 200
 
 @bp.route("/lots", methods=["POST"])
-@login_required
+@jwt_required()
 @admin_only
 def create_lot():
     payload = request.get_json() or {}
@@ -68,7 +70,7 @@ def create_lot():
     return jsonify({"message":"lot created","lot_id":lot.id}), 201
 
 @bp.route("/lots/<int:lot_id>", methods=["PUT"])
-@login_required
+@jwt_required()
 @admin_only
 def update_lot(lot_id):
     lot = ParkingLot.query.get_or_404(lot_id)
@@ -92,7 +94,7 @@ def update_lot(lot_id):
 # GET full lot details (including spots)
 @bp.route("/lots/<int:lot_id>", methods=["GET"])
 @cache.memoize(timeout=30)
-@login_required
+@jwt_required()
 @admin_only
 def get_lot(lot_id):
     """
@@ -110,7 +112,7 @@ def get_lot(lot_id):
     return jsonify(result), 200
 
 @bp.route("/lots/<int:lot_id>", methods=["DELETE"])
-@login_required
+@jwt_required()
 @admin_only
 def delete_lot(lot_id):
     lot = ParkingLot.query.get_or_404(lot_id)
@@ -126,7 +128,7 @@ def delete_lot(lot_id):
     return jsonify({"message":"lot deleted"}), 200
 
 @bp.route("/spots/<int:spot_id>", methods=["DELETE"])
-@login_required
+@jwt_required()
 @admin_only
 def delete_spot(spot_id):
     spot = ParkingSpot.query.get_or_404(spot_id)
@@ -143,6 +145,7 @@ def delete_spot(spot_id):
 
 @bp.route('/users', methods=['GET'])
 @cache.cached(timeout=60, key_prefix="admin_list_users")
+@jwt_required()
 @admin_only
 def list_users():
     users = User.query.all()
@@ -160,7 +163,7 @@ def list_users():
 from ..models import Reservation
 
 @bp.route('/spots/<int:spot_id>', methods=['GET'])
-@login_required
+@jwt_required()
 @admin_only
 def get_spot(spot_id):
     """
@@ -180,6 +183,7 @@ def get_spot(spot_id):
     }), 200
 
 @bp.route('/search', methods=['GET'])
+@jwt_required()
 @admin_only
 def search():
     """
@@ -277,7 +281,7 @@ def search():
 
 @bp.route('/summary', methods=['GET'])
 @cache.cached(timeout=60, key_prefix="admin_summary")
-@login_required
+@jwt_required()
 @admin_only
 def summary():
     """

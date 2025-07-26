@@ -3,6 +3,6 @@ Flask-Login
 Flask-SQLAlchemy
 redis
 celery
-flask-mail
+Flask-Mail
 Flask-Caching
 requests>=2.28.0

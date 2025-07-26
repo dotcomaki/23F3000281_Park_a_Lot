@@ -14,6 +14,20 @@ export FLASK_APP="backend.app:create_app"
 export FLASK_ENV=development
 export FLASK_DEBUG=1
 
+# === Start Redis ===
+echo "Starting Redis server..."
+redis-server --daemonize yes
+
+# === Start Celery worker ===
+echo "Starting Celery worker..."
+celery -A backend.celery_app.celery worker --loglevel=info &
+CELERY_WORKER_PID=$!
+
+# === Start Celery beat ===
+echo "Starting Celery beat..."
+celery -A backend.celery_app.celery beat --loglevel=info &
+CELERY_BEAT_PID=$!
+
 # === Start Flask backend in background ===
 echo "Starting Flask backend on port 5001..."
 flask run --port 5001 &
@@ -24,5 +38,8 @@ echo "Starting Vue frontend..."
 (cd frontend && npm run serve)
 
 # === Cleanup ===
-echo "Shutting down Flask backend..."
+echo "Shutting down services..."
 kill $BACKEND_PID
+kill $CELERY_WORKER_PID
+kill $CELERY_BEAT_PID
+redis-cli shutdown
