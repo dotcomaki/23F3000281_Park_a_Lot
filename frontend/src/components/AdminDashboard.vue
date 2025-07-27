@@ -67,7 +67,7 @@
             <td>{{ u.username }}</td>
             <td>{{ u.email }}</td>
             <td>{{ u.role }}</td>
-            <td>{{ u.registered_at }}</td>
+            <td>{{ formatDateTime(u.registered_at) }}</td>
           </tr>
         </tbody>
       </table>
@@ -132,7 +132,12 @@
         <tbody>
           <tr v-for="(row, index) in searchResults" :key="index">
             <td v-for="header in searchHeaders" :key="header">
-              {{ row[header] }}
+              <span v-if="header.includes('_at') || header.includes('date') || header === 'timestamp'">
+                {{ formatDateTime(row[header]) }}
+              </span>
+              <span v-else>
+                {{ row[header] }}
+              </span>
             </td>
           </tr>
         </tbody>
@@ -456,7 +461,7 @@
         <div class="modal-body">
           <p><strong>User:</strong> {{ spotDetails.username }} (ID: {{ spotDetails.user_id }})</p>
           <p><strong>Email:</strong> {{ spotDetails.email }}</p>
-          <p><strong>Parked At:</strong> {{ spotDetails.parked_at }}</p>
+          <p><strong>Parked At:</strong> {{ formatDateTime(spotDetails.parked_at) }}</p>
           <p><strong>Cost:</strong> {{ spotDetails.parking_cost }}</p>
         </div>
       </div>
@@ -590,6 +595,49 @@ export default {
         this.searchValue = ''
       } else if (tab === 'summary') {
         this.fetchSummary()
+      }
+    },
+
+    // Format datetime for display with smart relative time
+    formatDateTime(dateStr) {
+      if (!dateStr) return ''
+      
+      try {
+        // Handle both ISO format with Z and without
+        const cleanDateStr = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z'
+        const date = new Date(cleanDateStr)
+        
+        if (isNaN(date.getTime())) {
+          return dateStr // Return original if parsing fails
+        }
+        
+        const now = new Date()
+        const diffMs = now - date
+        const diffMins = Math.floor(diffMs / (1000 * 60))
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+        
+        // Show relative time for recent dates
+        if (diffMins < 1) {
+          return 'Just now'
+        } else if (diffMins < 60) {
+          return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`
+        } else if (diffHours < 24) {
+          return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`
+        } else if (diffDays < 7) {
+          return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`
+        } else {
+          // Show formatted date for older entries
+          return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        }
+      } catch (e) {
+        return dateStr // Return original on any error
       }
     },
 

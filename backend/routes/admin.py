@@ -156,7 +156,7 @@ def list_users():
             'username': u.username,
             'email': u.email,
             'role': u.role,
-            'registered_at': u.registered_at.isoformat() if u.registered_at else None
+            'registered_at': u.registered_at.isoformat() + 'Z' if u.registered_at else None
         })
     return jsonify(payload)
 
@@ -178,7 +178,7 @@ def get_spot(spot_id):
         'user_id': user.id,
         'username': user.username,
         'email': user.email,
-        'parked_at': reservation.parked_at.isoformat(),
+        'parked_at': reservation.parked_at.isoformat() + 'Z',
         'parking_cost': reservation.parking_cost
     }), 200
 
@@ -218,8 +218,8 @@ def search():
                     'spot_id': r.spot_id,
                     'lot_id': lot.id,
                     'lot_name': lot.prime_location_name,
-                    'parked_at': r.parked_at.isoformat() if r.parked_at else None,
-                    'left_at': r.left_at.isoformat() if r.left_at else None,
+                    'parked_at': r.parked_at.isoformat() + 'Z' if r.parked_at else None,
+                    'left_at': r.left_at.isoformat() + 'Z' if r.left_at else None,
                     'parking_cost': r.parking_cost
                 })
 
@@ -267,8 +267,8 @@ def search():
                     'spot_id': r.spot_id,
                     'lot_id': lot.id,
                     'lot_name': lot.prime_location_name,
-                    'parked_at': r.parked_at.isoformat() if r.parked_at else None,
-                    'left_at': r.left_at.isoformat() if r.left_at else None,
+                    'parked_at': r.parked_at.isoformat() + 'Z' if r.parked_at else None,
+                    'left_at': r.left_at.isoformat() + 'Z' if r.left_at else None,
                     'parking_cost': r.parking_cost
                 })
         else:

@@ -129,7 +129,7 @@
         <table v-if="reservations.length" class="table table-striped">
           <thead>
             <tr>
-              <th>Resv ID</th>
+              <th>ID</th>
               <th>Lot ID</th>
               <th>Spot ID</th>
               <th>Parked At</th>
@@ -143,8 +143,8 @@
               <td>{{ r.id }}</td>
               <td>{{ r.lot_id }}</td>
               <td>{{ r.spot_id }}</td>
-              <td>{{ r.parked_at }}</td>
-              <td>{{ r.left_at || '—' }}</td>
+              <td>{{ formatDateTime(r.parked_at) }}</td>
+              <td>{{ r.left_at ? formatDateTime(r.left_at) : '—' }}</td>
               <td>{{ r.cost != null ? `₹ ${r.cost.toFixed(2)}` : '—' }}</td>
               <td>
                 <button
@@ -405,6 +405,60 @@ async downloadFile() {
       this.exportStatus.message = 'Failed to download file: ' + (error.response?.data?.error || error.message);
     }
     this.exportStatus.alertClass = 'alert-danger';
+  }
+},
+
+/**
+ * Format datetime string to user-friendly format
+ */
+formatDateTime(dateTimeString) {
+  if (!dateTimeString) return '—';
+  
+  try {
+    const date = new Date(dateTimeString);
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) return dateTimeString;
+    
+    const now = new Date();
+    const diffInHours = (now - date) / (1000 * 60 * 60);
+    
+    // If it's within 24 hours, show relative time
+    if (diffInHours < 24) {
+      const options = {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      };
+      const timeStr = date.toLocaleTimeString('en-US', options);
+      
+      if (diffInHours < 1) {
+        const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+        if (diffInMinutes < 1) return 'Just now';
+        if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+      }
+      
+      if (date.toDateString() === now.toDateString()) {
+        return `Today ${timeStr}`;
+      } else {
+        return `Yesterday ${timeStr}`;
+      }
+    }
+    
+    // For older dates, show full date and time
+    const options = {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    };
+    
+    return date.toLocaleDateString('en-US', options);
+  } catch (error) {
+    console.warn('Error formatting date:', error);
+    return dateTimeString;
   }
 },
   }

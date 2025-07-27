@@ -57,7 +57,7 @@ def create_reservation():
         "message": "spot booked",
         "reservation_id": resv.id,
         "spot_id": spot.id,
-        "parked_at": resv.parked_at.isoformat()
+        "parked_at": resv.parked_at.isoformat() + 'Z'
     }), 201
 
 @bp.route("/reservations/<int:resv_id>/release", methods=["POST"])
@@ -81,7 +81,7 @@ def release_reservation(resv_id):
 
     return jsonify({
         "message": "spot released",
-        "left_at": resv.left_at.isoformat(),
+        "left_at": resv.left_at.isoformat() + 'Z',
         "cost": resv.parking_cost
     }), 200
 
@@ -97,8 +97,8 @@ def list_my_reservations():
             "id": r.id,
             "lot_id": r.spot.lot_id,
             "spot_id": r.spot_id,
-            "parked_at": r.parked_at.isoformat(),
-            "left_at": r.left_at.isoformat() if r.left_at else None,
+            "parked_at": r.parked_at.isoformat() + 'Z' if r.parked_at else None,
+            "left_at": r.left_at.isoformat() + 'Z' if r.left_at else None,
             "cost": r.parking_cost
         })
     return jsonify(output), 200
