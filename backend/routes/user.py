@@ -1,5 +1,3 @@
-# backend/routes/user.py
-
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..extensions import db, cache
@@ -40,7 +38,6 @@ def create_reservation():
     if not spot:
         return jsonify({"error":"no spots available"}), 400
 
-    # occupy it and create reservation
     spot.status = "O"
     resv = Reservation(
         spot_id=spot.id,
@@ -49,7 +46,6 @@ def create_reservation():
     )
     db.session.add(resv)
     db.session.commit()
-    # Invalidate caches
     cache.delete('user_list_lots')
     cache.delete('user_summary')
 
@@ -75,7 +71,6 @@ def release_reservation(resv_id):
     resv.calculate_cost()
     resv.spot.status = "A"
     db.session.commit()
-    # Invalidate caches
     cache.delete('user_list_lots')
     cache.delete('user_summary')
 
@@ -111,9 +106,7 @@ def user_summary():
     Return total number of reservations and total spent for current user.
     """
     uid = get_jwt_identity()
-    # 1) total reservations (all, regardless of completed or not)
     total_resv = Reservation.query.filter_by(user_id=uid).count()
-    # 2) total spent: sum up parking_cost on any reservation where cost is set
     total_spent = (
         db.session.query(func.coalesce(func.sum(Reservation.parking_cost), 0))
         .filter(
@@ -122,14 +115,10 @@ def user_summary():
         )
         .scalar()
     )
-    # ensure it’s a float for JSON
     return jsonify({
         'total_reservations': total_resv,
         'total_spent': float(total_spent)
     }), 200
-
-
-# --- CSV Export Endpoints ---
 
 @bp.route("/export", methods=["POST"])
 @jwt_required()
@@ -137,11 +126,9 @@ def export_csv():
     """
     Trigger generation of user's parking history CSV.
     """
-    # Import here to avoid circular dependency
     from ..tasks import generate_user_csv
     
     uid = get_jwt_identity()
-    # enqueue CSV generation task
     task = generate_user_csv.delay(uid)
     return jsonify({"task_id": task.id}), 202
 
@@ -196,11 +183,9 @@ def download_csv(task_id):
         
     file_path = result.result
     
-    # Security check: ensure the file exists and contains the user's ID
     if not os.path.exists(file_path):
         return jsonify({"error": "File not found"}), 404
         
-    # Additional security: check if file name contains the user's ID
     filename = os.path.basename(file_path)
     if f"user_{uid}_" not in filename:
         return jsonify({"error": "Unauthorized access"}), 403
@@ -232,14 +217,12 @@ def cleanup_exports():
     if not os.path.exists(exports_dir):
         return jsonify({"message": "No exports directory found"}), 200
     
-    # Find files older than 24 hours for this user
     pattern = os.path.join(exports_dir, f"user_{uid}_reservations_*.csv")
     files_removed = 0
     cutoff_time = datetime.now() - timedelta(hours=24)
     
     for file_path in glob.glob(pattern):
         try:
-            # Check file modification time
             file_mtime = datetime.fromtimestamp(os.path.getmtime(file_path))
             if file_mtime < cutoff_time:
                 os.remove(file_path)

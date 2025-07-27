@@ -1,5 +1,3 @@
-# backend/routes/auth.py
-
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
@@ -12,15 +10,12 @@ bp = Blueprint("auth", __name__)
 @bp.route("/register", methods=["POST"])
 def register():
     data = request.get_json() or {}
-    # ensure required fields
     if not all(k in data for k in ("username","email","password")):
         return jsonify({"error":"username, email and password required"}), 400
 
-    # check uniqueness
     if User.query.filter((User.username==data["username"]) | (User.email==data["email"])).first():
         return jsonify({"error":"username or email already taken"}), 400
 
-    # create user
     user = User(username=data["username"], email=data["email"])
     user.set_password(data["password"])
     db.session.add(user)
@@ -37,7 +32,6 @@ def login():
     if user is None or not user.check_password(password):
         return jsonify({"error": "invalid credentials"}), 401
 
-    # Issue a JWT instead of using Flask-Login sessions
     access_token = create_access_token(identity=user.id)
     return jsonify({
         "access_token": access_token,
@@ -62,7 +56,6 @@ def me():
     }), 200
 
 
-# Update profile route
 @bp.route("/profile", methods=["PUT"])
 @jwt_required()
 def update_profile():
@@ -71,7 +64,6 @@ def update_profile():
     """
     data = request.get_json() or {}
 
-    # Identify user
     user_id = get_jwt_identity()
     user = User.query.get_or_404(user_id)
 
@@ -79,15 +71,12 @@ def update_profile():
     email = data.get("email", "").strip()
     new_password = data.get("password", "")
 
-    # Validate username
     if not username or len(username) < 3:
         return jsonify({"error": "Username must be at least 3 characters."}), 400
 
-    # Validate email
     if not email or "@" not in email:
         return jsonify({"error": "A valid email is required."}), 400
 
-    # Check for username/email uniqueness (excluding current user)
     existing = User.query.filter(User.id != user.id, User.username == username).first()
     if existing:
         return jsonify({"error": "Username already taken."}), 409
@@ -96,13 +85,11 @@ def update_profile():
     if existing:
         return jsonify({"error": "Email already registered."}), 409
 
-    # If password provided, validate length and update
     if new_password:
         if len(new_password) < 8:
             return jsonify({"error": "Password must be at least 8 characters."}), 400
         user.password_hash = generate_password_hash(new_password)
 
-    # Update username and email
     user.username = username
     user.email = email
 

@@ -1,5 +1,3 @@
-# backend/routes/admin.py
-
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..app      import db
@@ -45,7 +43,6 @@ def list_lots():
 @admin_only
 def create_lot():
     payload = request.get_json() or {}
-    # required fields
     for f in ("name","price_per_hour","total_spots"):
         if f not in payload:
             return jsonify({"error":f"{f} required"}), 400
@@ -58,12 +55,10 @@ def create_lot():
         total_spots=int(payload["total_spots"])
     )
     db.session.add(lot)
-    db.session.flush()  # assign lot.id
-    # auto-generate spots
+    db.session.flush()
     for _ in range(lot.total_spots):
         db.session.add(ParkingSpot(lot_id=lot.id))
     db.session.commit()
-    # Invalidate caches
     cache.delete('admin_list_lots')
     cache.delete('admin_summary')
     cache.delete_memoized(get_lot, lot.id)
@@ -75,7 +70,6 @@ def create_lot():
 def update_lot(lot_id):
     lot = ParkingLot.query.get_or_404(lot_id)
     data = request.get_json() or {}
-    # update attributes
     if "name" in data:
         lot.prime_location_name = data["name"]
     if "price_per_hour" in data:
@@ -85,13 +79,11 @@ def update_lot(lot_id):
     if "pincode" in data:
         lot.pincode = data["pincode"]
     db.session.commit()
-    # Invalidate caches
     cache.delete('admin_list_lots')
     cache.delete('admin_summary')
     cache.delete_memoized(get_lot, lot_id)
     return jsonify({"message":"lot updated"}), 200
 
-# GET full lot details (including spots)
 @bp.route("/lots/<int:lot_id>", methods=["GET"])
 @cache.memoize(timeout=30)
 @jwt_required()
@@ -116,12 +108,10 @@ def get_lot(lot_id):
 @admin_only
 def delete_lot(lot_id):
     lot = ParkingLot.query.get_or_404(lot_id)
-    # only delete if all spots free
     if any(s.status == "O" for s in lot.spots):
         return jsonify({"error":"cannot delete: spots occupied"}), 400
     db.session.delete(lot)
     db.session.commit()
-    # Invalidate caches
     cache.delete('admin_list_lots')
     cache.delete('admin_summary')
     cache.delete_memoized(get_lot, lot_id)
@@ -137,7 +127,6 @@ def delete_spot(spot_id):
         return jsonify({"error":"cannot delete occupied spot"}), 400
     db.session.delete(spot)
     db.session.commit()
-    # Invalidate caches
     cache.delete('admin_list_lots')
     cache.delete('admin_summary')
     cache.delete_memoized(get_lot, lot_id)
@@ -206,7 +195,6 @@ def search():
 
     try:
         if by == 'user_id':
-            # find reservations for given user_id
             user_id = int(q)
             reservations = Reservation.query.filter_by(user_id=user_id).all()
             for r in reservations:
@@ -224,7 +212,6 @@ def search():
                 })
 
         elif by == 'lot_name':
-            # search lots by name substring (case-insensitive)
             lots = ParkingLot.query.filter(ParkingLot.prime_location_name.ilike(f"%{q}%")).all()
             for lot in lots:
                 available = sum(1 for s in lot.spots if s.status == "A")
@@ -238,7 +225,6 @@ def search():
                 })
 
         elif by == 'spot_location':
-            # search spots by lot address or pincode substring
             spots = ParkingSpot.query.join(ParkingLot).filter(
                 (ParkingLot.address.ilike(f"%{q}%")) |
                 (ParkingLot.pincode.ilike(f"%{q}%"))
@@ -255,7 +241,6 @@ def search():
                 })
 
         elif by == 'reservation_id':
-            # specific reservation by id
             res_id = int(q)
             r = Reservation.query.get(res_id)
             if r:
@@ -293,7 +278,6 @@ def summary():
     revenue = []
     occupancy = []
     for lot in lots:
-        # sum up all completed-parking costs
         total_rev = sum(
             r.parking_cost or 0
             for spot in lot.spots

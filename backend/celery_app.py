@@ -1,5 +1,3 @@
-# backend/celery_app.py
-
 from celery import Celery
 from .app import create_app
 from .config import Config
@@ -25,5 +23,4 @@ def make_celery(app=None):
 
     return celery
 
-# Instantiate a global Celery
 celery = make_celery()

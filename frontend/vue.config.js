@@ -3,7 +3,6 @@ module.exports = defineConfig({
   transpileDependencies: true
 })
 
-// frontend/vue.config.js
 module.exports = {
   devServer: {
     proxy: {

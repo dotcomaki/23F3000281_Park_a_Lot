@@ -69,11 +69,9 @@ export default {
           username: this.username,
           password: this.password
         })
-        // Store JWT and set default auth header
         const token = data.access_token
         localStorage.setItem('access_token', token)
         this.$axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
-        // emit the role back to App.vue
         this.$emit('login', data.role, token)
       } catch (e) {
         this.error = e.response?.data?.error || 'Login failed'

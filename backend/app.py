@@ -8,21 +8,17 @@ from .extensions import db, migrate, cache, mail
 def create_app():
     """Application factory; returns a Flask app instance."""
     app = Flask(__name__)
-    # Enable CORS for Vue frontend
     CORS(app, supports_credentials=True, resources={r"/*": {"origins": "http://localhost:8080"}})
     app.config.from_object(Config)
 
-    # initialize extensions with this app
     db.init_app(app)
     migrate.init_app(app, db)
     cache.init_app(app)
     mail.init_app(app)
     jwt = JWTManager(app)
 
-    # Import models to register with SQLAlchemy
     from . import models
 
-    # Register blueprints
     from .routes.auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix="/auth")
 

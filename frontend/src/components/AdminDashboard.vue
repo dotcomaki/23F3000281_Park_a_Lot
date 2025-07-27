@@ -859,9 +859,7 @@ export default {
       }
     },
 
-    /**
-     * Render Chart.js charts for revenue and occupancy.
-     */
+
     renderCharts() {
       // destroy existing charts, if any
       if (this.summaryCharts.revenue) this.summaryCharts.revenue.destroy()
@@ -905,7 +903,6 @@ export default {
 </script>
 
 <style scoped>
-/* component-specific styles, if needed */
 .spot-box {
   width: 40px;
   height: 40px;
@@ -917,9 +914,9 @@ export default {
   font-weight: bold;
 }
 .spot-box.available {
-  background-color: #d4edda; /* light green */
+  background-color: #d4edda;
 }
 .spot-box.occupied {
-  background-color: #f8d7da; /* light red */
+  background-color: #f8d7da;
 }
 </style>

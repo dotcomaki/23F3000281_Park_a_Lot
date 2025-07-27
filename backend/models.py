@@ -1,5 +1,3 @@
-# backend/models.py
-
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
@@ -15,7 +13,6 @@ class User(UserMixin, db.Model):
     role          = db.Column(db.String(20), nullable=False, default='user')
     registered_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
-    # relationship to reservations
     reservations = db.relationship(
         'Reservation',
         back_populates='user',
@@ -41,7 +38,6 @@ class ParkingLot(db.Model):
     pincode             = db.Column(db.String(10))
     total_spots         = db.Column(db.Integer, nullable=False)
 
-    # relationship to spots
     spots = db.relationship(
         'ParkingSpot',
         back_populates='lot',
@@ -60,9 +56,8 @@ class ParkingSpot(db.Model):
         db.ForeignKey('parking_lots.id'),
         nullable=False
     )
-    status = db.Column(db.String(1), nullable=False, default='A')  # A=available, O=occupied
+    status = db.Column(db.String(1), nullable=False, default='A')
 
-    # relationships
     lot          = db.relationship('ParkingLot', back_populates='spots')
     reservations = db.relationship(
         'Reservation',
@@ -92,7 +87,6 @@ class Reservation(db.Model):
     parking_cost = db.Column(db.Float)
     remarks      = db.Column(db.String(256))
 
-    # relationships
     spot = db.relationship('ParkingSpot', back_populates='reservations')
     user = db.relationship('User', back_populates='reservations')
 

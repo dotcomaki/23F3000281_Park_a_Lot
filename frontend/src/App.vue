@@ -1,9 +1,7 @@
 <template>
   <div>
-    <!-- Top bar only when logged in -->
     <NavBar v-if="role" @on-logout="handleLogout" />
 
-    <!-- Not logged in: show login or register -->
     <LoginView
       v-if="!role && !registering"
       @login="onLogin"
@@ -14,7 +12,6 @@
       @go-login="registering = false"
     />
 
-    <!-- Logged in: show the right dashboard -->
     <AdminDashboard v-else-if="role === 'admin'" />
     <UserDashboard  v-else />
   </div>
@@ -38,27 +35,23 @@ export default {
   },
   data() {
     return {
-      role: null,         // 'admin' or 'user' after login
-      registering: false, // toggle between login & register
+      role: null,
+      registering: false,
     };
   },
   async mounted() {
-    // Check if user is already logged in on page load/refresh
     await this.checkAuthStatus();
   },
   methods: {
     async checkAuthStatus() {
       const token = localStorage.getItem('access_token');
       if (token) {
-        // Set the axios default header
         this.$axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
         try {
-          // Verify the token is still valid by making a test request
           const response = await this.$axios.get('/auth/me');
           this.role = response.data.role;
         } catch (error) {
-          // Token is invalid or expired, clear it
           localStorage.removeItem('access_token');
           delete this.$axios.defaults.headers.common['Authorization'];
           this.role = null;
@@ -69,7 +62,6 @@ export default {
       this.role = role;
     },
     handleLogout() {
-      // clear the role and bring back to login screen
       localStorage.removeItem('access_token');
       delete this.$axios.defaults.headers.common['Authorization'];
       this.role = null;
@@ -80,5 +72,4 @@ export default {
 </script>
 
 <style>
-/* global styles if you need them */
 </style>

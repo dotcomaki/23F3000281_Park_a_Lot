@@ -82,7 +82,6 @@ export default {
   },
   computed: {
     validEmail() {
-      // simple regex; you can adjust as needed
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email)
     },
     isFormValid() {
@@ -116,5 +115,4 @@ export default {
 </script>
 
 <style scoped>
-/* component-specific styles, if needed */
 </style>

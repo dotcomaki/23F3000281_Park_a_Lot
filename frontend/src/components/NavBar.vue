@@ -29,5 +29,4 @@
   </script>
   
   <style scoped>
-  /* You can adjust spacing or colors here if you like */
   </style>
