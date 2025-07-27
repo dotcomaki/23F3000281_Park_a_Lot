@@ -45,6 +45,38 @@
     </div>
 
     <div v-if="activeTab === 'home'">
+      <!-- Export CSV Button -->
+      <div class="card mb-4 p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6>Export Your Data</h6>
+            <p class="mb-0 text-muted small">Download your complete parking history as CSV</p>
+          </div>
+          <div>
+            <button 
+              class="btn btn-outline-primary"
+              :disabled="exportStatus.isExporting"
+              @click="triggerExport"
+            >
+              <span v-if="exportStatus.isExporting" class="spinner-border spinner-border-sm me-2" role="status"></span>
+              {{ exportStatus.isExporting ? 'Generating...' : 'Export CSV' }}
+            </button>
+          </div>
+        </div>
+        
+        <!-- Export Status Alert -->
+        <div v-if="exportStatus.message" class="alert mt-3 mb-0" :class="exportStatus.alertClass" role="alert">
+          {{ exportStatus.message }}
+          <button 
+            v-if="exportStatus.downloadUrl" 
+            @click="downloadFile"
+            class="btn btn-sm btn-success ms-2"
+          >
+            Download CSV
+          </button>
+        </div>
+      </div>
+
       <!-- Available Lots -->
       <div class="card mb-4 p-3">
         <h5>Available Parking Lots</h5>
@@ -150,7 +182,15 @@ export default {
       loadingLots: false,
       loadingResv: false,
       errorLots: '',
-      errorResv: ''
+      errorResv: '',
+      // Export status
+      exportStatus: {
+        isExporting: false,
+        taskId: null,
+        message: '',
+        alertClass: '',
+        downloadUrl: null
+      }
     }
   },
   async mounted() {
@@ -254,6 +294,117 @@ selectTab(tab) {
     this.fetchReservations();
   } else if (tab === 'summary') {
     this.fetchSummary();
+  }
+},
+
+/**
+ * Trigger CSV export
+ */
+async triggerExport() {
+  this.exportStatus.isExporting = true;
+  this.exportStatus.message = '';
+  this.exportStatus.downloadUrl = null;
+  
+  try {
+    const response = await axios.post('/user/export');
+    this.exportStatus.taskId = response.data.task_id;
+    this.exportStatus.message = 'Export started! Checking status...';
+    this.exportStatus.alertClass = 'alert-info';
+    
+    // Start polling for status
+    this.pollExportStatus();
+  } catch (error) {
+    this.exportStatus.isExporting = false;
+    this.exportStatus.message = 'Failed to start export: ' + (error.response?.data?.error || error.message);
+    this.exportStatus.alertClass = 'alert-danger';
+  }
+},
+
+/**
+ * Poll export status
+ */
+async pollExportStatus() {
+  if (!this.exportStatus.taskId) return;
+  
+  try {
+    const response = await axios.get(`/user/export/${this.exportStatus.taskId}/status`);
+    const { state, download_url, error } = response.data;
+    
+    if (state === 'SUCCESS') {
+      this.exportStatus.isExporting = false;
+      this.exportStatus.message = 'Export completed successfully! Your CSV file is ready for download.';
+      this.exportStatus.alertClass = 'alert-success';
+      this.exportStatus.downloadUrl = download_url;
+    } else if (state === 'FAILURE') {
+      this.exportStatus.isExporting = false;
+      this.exportStatus.message = 'Export failed: ' + (error || 'Unknown error');
+      this.exportStatus.alertClass = 'alert-danger';
+    } else if (state === 'PENDING' || state === 'PROGRESS') {
+      // Continue polling
+      setTimeout(() => this.pollExportStatus(), 2000);
+    }
+  } catch (error) {
+    this.exportStatus.isExporting = false;
+    this.exportStatus.message = 'Failed to check export status: ' + (error.response?.data?.error || error.message);
+    this.exportStatus.alertClass = 'alert-danger';
+  }
+},
+
+/**
+ * Download the CSV file with proper authentication
+ */
+async downloadFile() {
+  if (!this.exportStatus.downloadUrl) return;
+  
+  try {
+    // Get the JWT token from localStorage or wherever it's stored
+    const token = localStorage.getItem('access_token') || 
+                  axios.defaults.headers.common['Authorization']?.replace('Bearer ', '');
+    
+    if (!token) {
+      this.exportStatus.message = 'Authentication required. Please log in again.';
+      this.exportStatus.alertClass = 'alert-danger';
+      return;
+    }
+    
+    const response = await axios.get(this.exportStatus.downloadUrl, {
+      responseType: 'blob', // Important for file downloads
+      headers: {
+        'Authorization': `Bearer ${token.replace('Bearer ', '')}`
+      }
+    });
+    
+    // Create blob link to download
+    const blob = new Blob([response.data], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    // Extract filename from response headers or use default
+    const contentDisposition = response.headers['content-disposition'];
+    let filename = 'parking_history.csv';
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
+    }
+    
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    
+    // Cleanup
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    
+  } catch (error) {
+    if (error.response?.status === 401) {
+      this.exportStatus.message = 'Authentication expired. Please log in again.';
+    } else {
+      this.exportStatus.message = 'Failed to download file: ' + (error.response?.data?.error || error.message);
+    }
+    this.exportStatus.alertClass = 'alert-danger';
   }
 },
   }

@@ -6,6 +6,7 @@ from ..extensions import db, cache
 from ..models   import ParkingLot, ParkingSpot, Reservation
 from datetime   import datetime
 from sqlalchemy import func
+from flask import current_app
 
 bp = Blueprint("user", __name__)
 
@@ -125,4 +126,127 @@ def user_summary():
     return jsonify({
         'total_reservations': total_resv,
         'total_spent': float(total_spent)
+    }), 200
+
+
+# --- CSV Export Endpoints ---
+
+@bp.route("/export", methods=["POST"])
+@jwt_required()
+def export_csv():
+    """
+    Trigger generation of user's parking history CSV.
+    """
+    # Import here to avoid circular dependency
+    from ..tasks import generate_user_csv
+    
+    uid = get_jwt_identity()
+    # enqueue CSV generation task
+    task = generate_user_csv.delay(uid)
+    return jsonify({"task_id": task.id}), 202
+
+
+@bp.route("/export/<task_id>/status", methods=["GET"])
+@jwt_required()
+def export_status(task_id):
+    """
+    Check status of CSV export task.
+    """
+    from celery.result import AsyncResult
+    from ..celery_app import celery
+    
+    result = AsyncResult(task_id, app=celery)
+    
+    response_data = {
+        "task_id": task_id,
+        "state": result.state,
+    }
+    
+    if result.ready():
+        if result.successful():
+            response_data["result"] = result.result
+            response_data["download_url"] = f"/user/export/{task_id}/download"
+        else:
+            response_data["error"] = str(result.result)
+    else:
+        response_data["result"] = None
+        
+    return jsonify(response_data), 200
+
+
+@bp.route("/export/<task_id>/download", methods=["GET"])
+@jwt_required()
+def download_csv(task_id):
+    """
+    Download the generated CSV file.
+    """
+    from celery.result import AsyncResult
+    from flask import send_file
+    from ..celery_app import celery
+    import os
+    
+    uid = get_jwt_identity()
+    result = AsyncResult(task_id, app=celery)
+    
+    if not result.ready():
+        return jsonify({"error": "Export not ready yet"}), 400
+        
+    if not result.successful():
+        return jsonify({"error": "Export failed"}), 400
+        
+    file_path = result.result
+    
+    # Security check: ensure the file exists and contains the user's ID
+    if not os.path.exists(file_path):
+        return jsonify({"error": "File not found"}), 404
+        
+    # Additional security: check if file name contains the user's ID
+    filename = os.path.basename(file_path)
+    if f"user_{uid}_" not in filename:
+        return jsonify({"error": "Unauthorized access"}), 403
+    
+    try:
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=f"parking_history_{uid}.csv",
+            mimetype='text/csv'
+        )
+    except Exception as e:
+        return jsonify({"error": f"Failed to send file: {str(e)}"}), 500
+
+
+@bp.route("/export/cleanup", methods=["POST"])
+@jwt_required()
+def cleanup_exports():
+    """
+    Clean up old export files for the current user.
+    """
+    import os
+    import glob
+    from datetime import datetime, timedelta
+    
+    uid = get_jwt_identity()
+    exports_dir = os.path.join(os.getcwd(), 'backend', 'exports')
+    
+    if not os.path.exists(exports_dir):
+        return jsonify({"message": "No exports directory found"}), 200
+    
+    # Find files older than 24 hours for this user
+    pattern = os.path.join(exports_dir, f"user_{uid}_reservations_*.csv")
+    files_removed = 0
+    cutoff_time = datetime.now() - timedelta(hours=24)
+    
+    for file_path in glob.glob(pattern):
+        try:
+            # Check file modification time
+            file_mtime = datetime.fromtimestamp(os.path.getmtime(file_path))
+            if file_mtime < cutoff_time:
+                os.remove(file_path)
+                files_removed += 1
+        except Exception as e:
+            print(f"Failed to remove {file_path}: {e}")
+    
+    return jsonify({
+        "message": f"Cleaned up {files_removed} old export files"
     }), 200
