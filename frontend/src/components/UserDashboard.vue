@@ -165,7 +165,6 @@
 </template>
 
 <script>
-import axios from 'axios'
 import Chart from 'chart.js/auto'
 
 export default {
@@ -203,7 +202,7 @@ export default {
   methods: {
       async fetchSummary() {
     try {
-      const resp = await axios.get('/user/summary')
+      const resp = await this.$axios.get('/user/summary')
       this.summary = resp.data
       // render chart after data update
       this.$nextTick(() => this.renderUserChart())
@@ -215,7 +214,7 @@ export default {
       this.loadingLots = true
       this.errorLots = ''
       try {
-        const resp = await axios.get('/user/lots')
+        const resp = await this.$axios.get('/user/lots')
         this.lots = resp.data
       } catch (e) {
         this.errorLots = e.response?.data?.error || 'Failed to load lots'
@@ -237,7 +236,7 @@ export default {
     },
     async bookSpot(lotId) {
       try {
-        await axios.post('/user/reservations', { lot_id: lotId })
+        await this.$axios.post('/user/reservations', { lot_id: lotId })
         // refresh data
         await Promise.all([this.fetchSummary(), this.fetchLots(), this.fetchReservations()])
       } catch (e) {
@@ -246,7 +245,7 @@ export default {
     },
     async releaseSpot(resvId) {
       try {
-        await axios.post(`/user/reservations/${resvId}/release`)
+        await this.$axios.post(`/user/reservations/${resvId}/release`)
         // refresh data
         await Promise.all([this.fetchSummary(), this.fetchLots(), this.fetchReservations()])
       } catch (e) {
@@ -306,7 +305,7 @@ async triggerExport() {
   this.exportStatus.downloadUrl = null;
   
   try {
-    const response = await axios.post('/user/export');
+    const response = await this.$axios.post('/user/export');
     this.exportStatus.taskId = response.data.task_id;
     this.exportStatus.message = 'Export started! Checking status...';
     this.exportStatus.alertClass = 'alert-info';
@@ -327,7 +326,7 @@ async pollExportStatus() {
   if (!this.exportStatus.taskId) return;
   
   try {
-    const response = await axios.get(`/user/export/${this.exportStatus.taskId}/status`);
+    const response = await this.$axios.get(`/user/export/${this.exportStatus.taskId}/status`);
     const { state, download_url, error } = response.data;
     
     if (state === 'SUCCESS') {
@@ -359,7 +358,7 @@ async downloadFile() {
   try {
     // Get the JWT token from localStorage or wherever it's stored
     const token = localStorage.getItem('access_token') || 
-                  axios.defaults.headers.common['Authorization']?.replace('Bearer ', '');
+                  this.$axios.defaults.headers.common['Authorization']?.replace('Bearer ', '');
     
     if (!token) {
       this.exportStatus.message = 'Authentication required. Please log in again.';
@@ -367,7 +366,7 @@ async downloadFile() {
       return;
     }
     
-    const response = await axios.get(this.exportStatus.downloadUrl, {
+    const response = await this.$axios.get(this.exportStatus.downloadUrl, {
       responseType: 'blob', // Important for file downloads
       headers: {
         'Authorization': `Bearer ${token.replace('Bearer ', '')}`

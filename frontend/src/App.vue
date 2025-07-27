@@ -42,12 +42,36 @@ export default {
       registering: false, // toggle between login & register
     };
   },
+  async mounted() {
+    // Check if user is already logged in on page load/refresh
+    await this.checkAuthStatus();
+  },
   methods: {
+    async checkAuthStatus() {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        // Set the axios default header
+        this.$axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        try {
+          // Verify the token is still valid by making a test request
+          const response = await this.$axios.get('/auth/me');
+          this.role = response.data.role;
+        } catch (error) {
+          // Token is invalid or expired, clear it
+          localStorage.removeItem('access_token');
+          delete this.$axios.defaults.headers.common['Authorization'];
+          this.role = null;
+        }
+      }
+    },
     onLogin(role) {
       this.role = role;
     },
     handleLogout() {
       // clear the role and bring back to login screen
+      localStorage.removeItem('access_token');
+      delete this.$axios.defaults.headers.common['Authorization'];
       this.role = null;
       this.registering = false;
     },

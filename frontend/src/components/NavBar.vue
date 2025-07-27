@@ -12,15 +12,13 @@
   </template>
   
   <script>
-  import axios from "axios";
-  
   export default {
     name: "NavBar",
     emits: ["on-logout"],
     methods: {
       async logout() {
         try {
-          await axios.post("/auth/logout");
+          await this.$axios.post("/auth/logout");
           this.$emit("on-logout");
         } catch (e) {
           console.error("Logout failed:", e);

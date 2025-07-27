@@ -474,7 +474,6 @@
 </template>
 
 <script>
-import axios from 'axios'
 import Chart from 'chart.js/auto'
 
 export default {
@@ -646,7 +645,7 @@ export default {
       this.loadingUsers = true
       this.errorUsers = ''
       try {
-        const resp = await axios.get('/admin/users')
+        const resp = await this.$axios.get('/admin/users')
         this.users = resp.data
       } catch (e) {
         this.errorUsers = e.response?.data?.error || 'Failed to load users'
@@ -663,7 +662,7 @@ export default {
       this.searchResults = []
       try {
         // Example endpoint: /admin/search?by=user_id&q=123
-        const resp = await axios.get('/admin/search', {
+        const resp = await this.$axios.get('/admin/search', {
           params: {
             by: this.searchBy,
             q: this.searchValue.trim()
@@ -684,7 +683,7 @@ export default {
       this.profileSuccess = ''
       this.loadingProfile = true
       try {
-        const resp = await axios.get('/auth/me')
+        const resp = await this.$axios.get('/auth/me')
         const user = resp.data
         this.profile.username = user.username
         this.profile.email = user.email
@@ -723,7 +722,7 @@ export default {
         if (this.profile.password) {
           payload.password = this.profile.password
         }
-        await axios.put('/auth/profile', payload)
+        await this.$axios.put('/auth/profile', payload)
         this.profileSuccess = 'Profile updated successfully.'
       } catch (e) {
         this.profileError = e.response?.data?.error || 'Failed to update profile'
@@ -737,7 +736,7 @@ export default {
       this.loading = true
       this.error = ''
       try {
-        const resp = await axios.get('/admin/lots')
+        const resp = await this.$axios.get('/admin/lots')
         this.lots = resp.data
       } catch (e) {
         this.error = e.response?.data?.error || 'Failed to load lots'
@@ -760,7 +759,7 @@ export default {
           address: this.newLot.address || undefined,
           pincode: this.newLot.pincode || undefined
         }
-        const resp = await axios.post('/admin/lots', payload)
+        const resp = await this.$axios.post('/admin/lots', payload)
         this.lots.push({
           id: resp.data.lot_id,
           name: this.newLot.name,
@@ -797,7 +796,7 @@ export default {
 
       const { id, name, price_per_hour, address, pincode } = this.editing
       try {
-        await axios.put(`/admin/lots/${id}`, {
+        await this.$axios.put(`/admin/lots/${id}`, {
           name,
           price_per_hour,
           address,
@@ -815,7 +814,7 @@ export default {
     async deleteLot(lotId) {
       if (!confirm('Really delete this parking lot?')) return
       try {
-        await axios.delete(`/admin/lots/${lotId}`)
+        await this.$axios.delete(`/admin/lots/${lotId}`)
         this.lots = this.lots.filter(l => l.id !== lotId)
       } catch (e) {
         alert(e.response?.data?.error || 'Delete failed')
@@ -827,7 +826,7 @@ export default {
      */
     async viewLot(lot) {
       try {
-        const resp = await axios.get(`/admin/lots/${lot.id}`);
+        const resp = await this.$axios.get(`/admin/lots/${lot.id}`);
         this.selectedLot = resp.data;
       } catch (e) {
         alert('Failed to load lot details');
@@ -839,7 +838,7 @@ export default {
      */
     async viewSpot(spotId) {
       try {
-        const resp = await axios.get(`/admin/spots/${spotId}`);
+        const resp = await this.$axios.get(`/admin/spots/${spotId}`);
         this.spotDetails = resp.data;
         this.showSpotModal = true;
       } catch (e) {
@@ -852,7 +851,7 @@ export default {
      */
     async fetchSummary() {
       try {
-        const resp = await axios.get('/admin/summary')
+        const resp = await this.$axios.get('/admin/summary')
         this.summaryData = resp.data
         this.$nextTick(() => this.renderCharts())
       } catch {

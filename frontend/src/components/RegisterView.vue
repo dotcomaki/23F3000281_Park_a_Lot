@@ -64,7 +64,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+
 
 export default {
   name: 'RegisterView',
@@ -98,7 +98,7 @@ export default {
       this.error = ''
       this.loading = true
       try {
-        await axios.post('/auth/register', {
+        await this.$axios.post('/auth/register', {
           username: this.username,
           email: this.email,
           password: this.password

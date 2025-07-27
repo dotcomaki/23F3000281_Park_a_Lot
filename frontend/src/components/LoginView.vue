@@ -43,8 +43,6 @@
 </template>
 
 <script>
-import axios from 'axios'
-
 export default {
   name: 'LoginView',
   data() {
@@ -67,14 +65,14 @@ export default {
       this.error = ''
       this.loading = true
       try {
-        const { data } = await axios.post('/auth/login', {
+        const { data } = await this.$axios.post('/auth/login', {
           username: this.username,
           password: this.password
         })
         // Store JWT and set default auth header
         const token = data.access_token
         localStorage.setItem('access_token', token)
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+        this.$axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
         // emit the role back to App.vue
         this.$emit('login', data.role, token)
       } catch (e) {
