@@ -1,6 +1,9 @@
 Flask
 Flask-Login
 Flask-SQLAlchemy
+Flask-JWT-Extended
+Flask-CORS
+Flask-Migrate
 redis
 celery
 Flask-Mail
