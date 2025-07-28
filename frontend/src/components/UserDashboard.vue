@@ -1,64 +1,120 @@
 <template>
-  <div class="container mt-5">
-    <h2>User Dashboard</h2>
-
-    <ul class="nav nav-tabs mb-4">
-      <li class="nav-item">
-        <a
-          class="nav-link"
-          :class="{ active: activeTab === 'home' }"
-          href="#"
-          @click.prevent="selectTab('home')"
-        >Home</a>
-      </li>
-      <li class="nav-item">
-        <a
-          class="nav-link"
-          :class="{ active: activeTab === 'summary' }"
-          href="#"
-          @click.prevent="selectTab('summary')"
-        >Summary</a>
-      </li>
-    </ul>
-
-    <div v-if="activeTab === 'summary'">
-      <!-- Summary Cards -->
-      <div class="row mb-4">
-        <div class="col-md-6 mb-3">
-          <div class="card p-3 text-center">
-            <h5>Total Reservations</h5>
-            <p class="fs-3">{{ summary.total_reservations }}</p>
+  <div class="container-fluid mt-4">
+    <!-- Enhanced Header with Gradient -->
+    <div class="user-header mb-4">
+      <div class="row align-items-center">
+        <div class="col">
+          <h1 class="display-5 fw-bold text-white mb-0">
+            <i class="fas fa-tachometer-alt me-3"></i>
+            User Dashboard
+          </h1>
+          <p class="text-white-50 mb-0">Manage your parking reservations</p>
+        </div>
+        <div class="col-auto">
+          <div class="badge bg-light text-dark fs-6 px-3 py-2">
+            <i class="fas fa-user me-2"></i>
+            User
           </div>
         </div>
-        <div class="col-md-6 mb-3">
-          <div class="card p-3 text-center">
-            <h5>Total Spent</h5>
-            <p class="fs-3">₹ {{ summary.total_spent.toFixed(2) }}</p>
-          </div>
-        </div>
-      </div>
-      <!-- User summary chart -->
-      <div class="card mb-4 p-3">
-        <h5>Reservations & Spending Summary</h5>
-        <canvas id="userSummaryChart"></canvas>
       </div>
     </div>
 
-    <div v-if="activeTab === 'home'">
-      <!-- Export CSV Button -->
-      <div class="card mb-4 p-3">
-        <div class="d-flex justify-content-between align-items-center">
+    <!-- Enhanced Navigation Tabs -->
+    <div class="nav-container mb-4">
+      <ul class="nav nav-pills nav-fill">
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            :class="{ active: activeTab === 'home' }"
+            href="#"
+            @click.prevent="selectTab('home')"
+          >
+            <i class="fas fa-home me-2"></i>Home
+          </a>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            :class="{ active: activeTab === 'summary' }"
+            href="#"
+            @click.prevent="selectTab('summary')"
+          >
+            <i class="fas fa-chart-bar me-2"></i>Summary
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Summary View -->
+    <div v-if="activeTab === 'summary'" class="fade-in">
+      <!-- Summary Cards -->
+      <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+          <div class="stats-card bg-primary text-white">
+            <div class="stats-icon">
+              <i class="fas fa-calendar-alt fa-2x"></i>
+            </div>
+            <div class="stats-content">
+              <h5 class="mb-0">Total Reservations</h5>
+              <p class="fs-3 fw-bold mb-0">{{ summary.total_reservations }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 mb-3">
+          <div class="stats-card bg-success text-white">
+            <div class="stats-icon">
+              <i class="fas fa-rupee-sign fa-2x"></i>
+            </div>
+            <div class="stats-content">
+              <h5 class="mb-0">Total Spent</h5>
+              <p class="fs-3 fw-bold mb-0">₹{{ summary.total_spent.toFixed(2) }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- User summary chart -->
+      <div class="enhanced-card">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-chart-line me-2 text-primary"></i>
+            Reservations & Spending Summary
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="chart-container">
+            <canvas id="userSummaryChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Home View -->
+    <div v-if="activeTab === 'home'" class="fade-in">
+      <!-- Export CSV Card -->
+      <div class="enhanced-card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-download me-2 text-success"></i>
+            Export Data
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
           <div>
-            <h6>Export Your Data</h6>
+            <h6 class="mb-1">
+              <i class="fas fa-file-export me-2"></i>Export Your Data
+            </h6>
             <p class="mb-0 text-muted small">Download your complete parking history as CSV</p>
           </div>
           <div>
             <button 
-              class="btn btn-outline-primary"
+              class="btn btn-success"
               :disabled="exportStatus.isExporting"
               @click="triggerExport"
             >
               <span v-if="exportStatus.isExporting" class="spinner-border spinner-border-sm me-2" role="status"></span>
+              <i v-else class="fas fa-download me-2"></i>
               {{ exportStatus.isExporting ? 'Generating...' : 'Export CSV' }}
             </button>
           </div>
@@ -66,99 +122,146 @@
         
         <!-- Export Status Alert -->
         <div v-if="exportStatus.message" class="alert mt-3 mb-0" :class="exportStatus.alertClass" role="alert">
-          {{ exportStatus.message }}
+          <i class="fas fa-info-circle me-2"></i>{{ exportStatus.message }}
           <button 
             v-if="exportStatus.downloadUrl" 
             @click="downloadFile"
             class="btn btn-sm btn-success ms-2"
           >
-            Download CSV
+            <i class="fas fa-download me-1"></i>Download CSV
           </button>
         </div>
       </div>
+      </div>
 
       <!-- Available Lots -->
-      <div class="card mb-4 p-3">
-        <h5>Available Parking Lots</h5>
-        <div v-if="loadingLots" class="text-center my-3">
-          <div class="spinner-border" role="status">
-            <span class="visually-hidden">Loading...</span>
+      <div class="enhanced-card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-parking me-2 text-primary"></i>
+            Available Parking Lots
+          </h5>
+        </div>
+        <div class="card-body">
+          <div v-if="loadingLots" class="loading-container">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading parking lots...</p>
+          </div>
+          <div v-if="errorLots" class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>{{ errorLots }}
+          </div>
+          <div v-if="lots.length && !loadingLots" class="table-responsive">
+            <table class="table table-hover">
+              <thead class="table-dark">
+                <tr>
+                  <th><i class="fas fa-id-badge me-1"></i>ID</th>
+                  <th><i class="fas fa-tag me-1"></i>Name</th>
+                  <th><i class="fas fa-rupee-sign me-1"></i>Price/hr</th>
+                  <th><i class="fas fa-check-circle me-1"></i>Available</th>
+                  <th><i class="fas fa-cogs me-1"></i>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="lot in lots" :key="lot.id" class="table-row-hover">
+                  <td><span class="badge bg-secondary">{{ lot.id }}</span></td>
+                  <td><strong>{{ lot.name }}</strong></td>
+                  <td>₹{{ lot.price_per_hour }}</td>
+                  <td>
+                    <span 
+                      class="badge"
+                      :class="lot.available_spots > 0 ? 'bg-success' : 'bg-danger'"
+                    >
+                      {{ lot.available_spots }}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      class="btn btn-sm btn-primary"
+                      :disabled="lot.available_spots === 0"
+                      @click="bookSpot(lot.id)"
+                    >
+                      <i class="fas fa-calendar-plus me-1"></i>
+                      {{ lot.available_spots ? 'Book' : 'Full' }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else-if="!loadingLots" class="empty-state">
+            <i class="fas fa-parking fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No parking lots available.</p>
           </div>
         </div>
-        <div v-if="errorLots" class="alert alert-danger">{{ errorLots }}</div>
-        <table v-if="lots.length" class="table table-hover">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Price/hr</th>
-              <th>Available</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="lot in lots" :key="lot.id">
-              <td>{{ lot.id }}</td>
-              <td>{{ lot.name }}</td>
-              <td>₹ {{ lot.price_per_hour }}</td>
-              <td>{{ lot.available_spots }}</td>
-              <td>
-                <button
-                  class="btn btn-sm btn-primary"
-                  :disabled="lot.available_spots === 0"
-                  @click="bookSpot(lot.id)"
-                >
-                  {{ lot.available_spots ? 'Book' : 'Full' }}
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <p v-else-if="!loadingLots">No parking lots available.</p>
       </div>
 
       <!-- My Reservations -->
-      <div class="card p-3">
-        <h5>My Reservations</h5>
-        <div v-if="loadingResv" class="text-center my-3">
-          <div class="spinner-border" role="status">
-            <span class="visually-hidden">Loading...</span>
+      <div class="enhanced-card">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-list-alt me-2 text-info"></i>
+            My Reservations
+          </h5>
+        </div>
+        <div class="card-body">
+          <div v-if="loadingResv" class="loading-container">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading reservations...</p>
+          </div>
+          <div v-if="errorResv" class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>{{ errorResv }}
+          </div>
+          <div v-if="reservations.length && !loadingResv" class="table-responsive">
+            <table class="table table-hover">
+              <thead class="table-dark">
+                <tr>
+                  <th><i class="fas fa-id-badge me-1"></i>ID</th>
+                  <th><i class="fas fa-parking me-1"></i>Lot ID</th>
+                  <th><i class="fas fa-map-marker-alt me-1"></i>Spot ID</th>
+                  <th><i class="fas fa-clock me-1"></i>Parked At</th>
+                  <th><i class="fas fa-sign-out-alt me-1"></i>Left At</th>
+                  <th><i class="fas fa-rupee-sign me-1"></i>Cost</th>
+                  <th><i class="fas fa-cogs me-1"></i>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="r in reservations" :key="r.id" class="table-row-hover">
+                  <td><span class="badge bg-info">{{ r.id }}</span></td>
+                  <td><span class="badge bg-secondary">{{ r.lot_id }}</span></td>
+                  <td><span class="badge bg-warning">{{ r.spot_id }}</span></td>
+                  <td>{{ formatDateTime(r.parked_at) }}</td>
+                  <td>
+                    <span v-if="r.left_at">{{ formatDateTime(r.left_at) }}</span>
+                    <span v-else class="badge bg-success">Active</span>
+                  </td>
+                  <td>
+                    <span v-if="r.cost != null" class="fw-bold text-success">₹{{ r.cost.toFixed(2) }}</span>
+                    <span v-else class="text-muted">—</span>
+                  </td>
+                  <td>
+                    <button
+                      class="btn btn-sm"
+                      :class="r.left_at ? 'btn-outline-secondary' : 'btn-danger'"
+                      :disabled="r.left_at"
+                      @click="releaseSpot(r.id)"
+                    >
+                      <i :class="r.left_at ? 'fas fa-check' : 'fas fa-sign-out-alt'" class="me-1"></i>
+                      {{ r.left_at ? 'Released' : 'Release' }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else-if="!loadingResv" class="empty-state">
+            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+            <p class="text-muted">You have no reservations.</p>
           </div>
         </div>
-        <div v-if="errorResv" class="alert alert-danger">{{ errorResv }}</div>
-        <table v-if="reservations.length" class="table table-striped">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Lot ID</th>
-              <th>Spot ID</th>
-              <th>Parked At</th>
-              <th>Left At</th>
-              <th>Cost</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="r in reservations" :key="r.id">
-              <td>{{ r.id }}</td>
-              <td>{{ r.lot_id }}</td>
-              <td>{{ r.spot_id }}</td>
-              <td>{{ formatDateTime(r.parked_at) }}</td>
-              <td>{{ r.left_at ? formatDateTime(r.left_at) : '—' }}</td>
-              <td>{{ r.cost != null ? `₹ ${r.cost.toFixed(2)}` : '—' }}</td>
-              <td>
-                <button
-                  class="btn btn-sm btn-danger"
-                  :disabled="r.left_at"
-                  @click="releaseSpot(r.id)"
-                >
-                  {{ r.left_at ? 'Released' : 'Release' }}
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <p v-else-if="!loadingResv">You have no reservations.</p>
       </div>
     </div>
   </div>
@@ -465,5 +568,177 @@ formatDateTime(dateTimeString) {
 </script>
 
 <style scoped>
-/* Add any component-specific styles here */
+/* Enhanced User Dashboard Styles */
+.user-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.nav-container {
+  background: white;
+  border-radius: 15px;
+  padding: 0.5rem;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.nav-pills .nav-link {
+  border-radius: 10px;
+  margin: 0 0.25rem;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.nav-pills .nav-link:hover {
+  background-color: #f8f9fa;
+  transform: translateY(-2px);
+}
+
+.nav-pills .nav-link.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.enhanced-card {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+  border: none;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.enhanced-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+.enhanced-card .card-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 3px solid #667eea;
+  padding: 1.5rem;
+}
+
+.enhanced-card .card-body {
+  padding: 2rem;
+}
+
+.stats-card {
+  display: flex;
+  align-items: center;
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.stats-card:hover {
+  transform: translateY(-5px);
+}
+
+.stats-icon {
+  margin-right: 1.5rem;
+  opacity: 0.8;
+}
+
+.stats-content h5 {
+  font-size: 1rem;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.stats-content .fs-3 {
+  font-size: 2.5rem !important;
+  font-weight: 700;
+}
+
+.loading-container {
+  text-align: center;
+  padding: 3rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+}
+
+.table-hover tbody tr:hover {
+  background-color: #f8f9fa;
+  transform: scale(1.01);
+  transition: all 0.2s ease;
+}
+
+.table-dark th {
+  background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+  border: none;
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.chart-container {
+  background: white;
+  padding: 1rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.form-control:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.alert {
+  border-radius: 10px;
+  border: none;
+}
+
+.badge {
+  font-size: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+}
+
+.table-row-hover {
+  transition: all 0.2s ease;
+}
+
+@media (max-width: 768px) {
+  .user-header {
+    padding: 1.5rem;
+  }
+  
+  .enhanced-card .card-body {
+    padding: 1.5rem;
+  }
+  
+  .stats-card {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .stats-icon {
+    margin-right: 0;
+    margin-bottom: 1rem;
+  }
+}
 </style>
