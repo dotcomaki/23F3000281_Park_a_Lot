@@ -29,6 +29,9 @@ class Config:
     CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL", "redis://localhost:6379/0")
     CACHE_DEFAULT_TIMEOUT = int(os.environ.get("CACHE_DEFAULT_TIMEOUT", 60))
 
+    # JWT Configuration
+    JWT_ALGORITHM = "HS256"
+
     MAIL_SERVER        = os.getenv("MAIL_SERVER",   "smtp.gmail.com")
     MAIL_PORT          = int(os.getenv("MAIL_PORT",  "587"))
     MAIL_USE_TLS       = os.getenv("MAIL_USE_TLS",  "true").lower() in ("true","1","yes")

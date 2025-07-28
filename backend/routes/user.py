@@ -41,7 +41,7 @@ def create_reservation():
     spot.status = "O"
     resv = Reservation(
         spot_id=spot.id,
-        user_id=get_jwt_identity(),
+        user_id=int(get_jwt_identity()),
         parked_at=datetime.utcnow()
     )
     db.session.add(resv)
@@ -63,7 +63,7 @@ def release_reservation(resv_id):
     Release a booked spot.
     """
     resv = Reservation.query.get_or_404(resv_id)
-    uid = get_jwt_identity()
+    uid = int(get_jwt_identity())
     if resv.user_id != uid or resv.left_at:
         return jsonify({"error":"invalid reservation"}), 400
 
@@ -84,7 +84,7 @@ def release_reservation(resv_id):
 @jwt_required()
 def list_my_reservations():
     """List all your reservations."""
-    uid = get_jwt_identity()
+    uid = int(get_jwt_identity())
     resvs = Reservation.query.filter_by(user_id=uid).all()
     output = []
     for r in resvs:
@@ -105,7 +105,7 @@ def user_summary():
     """
     Return total number of reservations and total spent for current user.
     """
-    uid = get_jwt_identity()
+    uid = int(get_jwt_identity())
     total_resv = Reservation.query.filter_by(user_id=uid).count()
     total_spent = (
         db.session.query(func.coalesce(func.sum(Reservation.parking_cost), 0))
@@ -128,7 +128,7 @@ def export_csv():
     """
     from ..tasks import generate_user_csv
     
-    uid = get_jwt_identity()
+    uid = int(get_jwt_identity())
     task = generate_user_csv.delay(uid)
     return jsonify({"task_id": task.id}), 202
 
@@ -172,7 +172,7 @@ def download_csv(task_id):
     from ..celery_app import celery
     import os
     
-    uid = get_jwt_identity()
+    uid = int(get_jwt_identity())
     result = AsyncResult(task_id, app=celery)
     
     if not result.ready():
@@ -211,7 +211,7 @@ def cleanup_exports():
     import glob
     from datetime import datetime, timedelta
     
-    uid = get_jwt_identity()
+    uid = int(get_jwt_identity())
     exports_dir = os.path.join(os.getcwd(), 'backend', 'exports')
     
     if not os.path.exists(exports_dir):

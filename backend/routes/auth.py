@@ -32,7 +32,7 @@ def login():
     if user is None or not user.check_password(password):
         return jsonify({"error": "invalid credentials"}), 401
 
-    access_token = create_access_token(identity=user.id)
+    access_token = create_access_token(identity=str(user.id))
     return jsonify({
         "access_token": access_token,
         "role": user.role
@@ -46,7 +46,7 @@ def logout():
 @bp.route("/me", methods=["GET"])
 @jwt_required()
 def me():
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     user = User.query.get_or_404(user_id)
     return jsonify({
         "id": user.id,
@@ -64,7 +64,7 @@ def update_profile():
     """
     data = request.get_json() or {}
 
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     user = User.query.get_or_404(user_id)
 
     username = data.get("username", "").strip()
