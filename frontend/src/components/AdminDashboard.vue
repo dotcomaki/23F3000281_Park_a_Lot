@@ -13,7 +13,10 @@
         <div class="col-auto">
           <div class="badge bg-light text-dark fs-6 px-3 py-2">
             <i class="fas fa-user-shield me-2"></i>
-            Administrator
+            <div class="d-flex flex-column text-start">
+              <span class="fw-bold">{{ currentUser.username }}</span>
+              <small class="text-muted">{{ currentUser.email }}</small>
+            </div>
           </div>
         </div>
       </div>
@@ -235,7 +238,7 @@
                     v-model.trim="profile.username"
                     @blur="profileTouched.username = true"
                     :class="{ 'form-control': true, 'is-invalid': profileTouched.username && profile.username.length < 3 }"
-                    placeholder="Username"
+                    placeholder="admin"
                     required
                   />
                   <div class="invalid-feedback">Username must be at least 3 characters.</div>
@@ -251,7 +254,7 @@
                     @blur="profileTouched.email = true"
                     type="email"
                     :class="{ 'form-control': true, 'is-invalid': profileTouched.email && !validEmail }"
-                    placeholder="Email"
+                    placeholder="admin@parkingapp.local"
                     required
                   />
                   <div class="invalid-feedback">Enter a valid email address.</div>
@@ -707,6 +710,12 @@ export default {
       // Current tab: 'home', 'users', 'search', 'summary', 'profile'
       activeTab: 'home',
 
+      // Current logged-in user info
+      currentUser: {
+        username: 'admin',
+        email: 'admin@parkingapp.local'
+      },
+
       // For users view
       users: [],
       loadingUsers: false,
@@ -802,7 +811,10 @@ export default {
     }
   },
   async mounted() {
-    await this.fetchLots()
+    await Promise.all([
+      this.fetchLots(),
+      this.loadCurrentUser()
+    ])
   },
   methods: {
     // Tab selection handler
@@ -818,6 +830,30 @@ export default {
         this.searchValue = ''
       } else if (tab === 'summary') {
         this.fetchSummary()
+      } else if (tab === 'profile') {
+        this.loadCurrentUser()
+      }
+    },
+
+    // Load current user information
+    async loadCurrentUser() {
+      try {
+        const resp = await this.$axios.get('/auth/me')
+        const user = resp.data
+        // Update current user display in header
+        this.currentUser.username = user.username
+        this.currentUser.email = user.email
+        // If we're on profile tab, populate the form
+        if (this.activeTab === 'profile') {
+          this.profile.username = user.username
+          this.profile.email = user.email
+          this.profile.password = ''
+          this.profile.confirmPassword = ''
+          this.profileTouched = { username: false, email: false, password: false, confirmPassword: false }
+        }
+      } catch (e) {
+        console.error('Failed to load current user:', e)
+        // Keep defaults if API fails
       }
     },
 
@@ -907,13 +943,7 @@ export default {
       this.profileSuccess = ''
       this.loadingProfile = true
       try {
-        const resp = await this.$axios.get('/auth/me')
-        const user = resp.data
-        this.profile.username = user.username
-        this.profile.email = user.email
-        this.profile.password = ''
-        this.profile.confirmPassword = ''
-        this.profileTouched = { username: false, email: false, password: false, confirmPassword: false }
+        await this.loadCurrentUser()
       } catch (e) {
         this.profileError = 'Failed to fetch profile'
       } finally {
@@ -947,6 +977,9 @@ export default {
           payload.password = this.profile.password
         }
         await this.$axios.put('/auth/profile', payload)
+        // Update current user display in header
+        this.currentUser.username = this.profile.username
+        this.currentUser.email = this.profile.email
         this.profileSuccess = 'Profile updated successfully.'
       } catch (e) {
         this.profileError = e.response?.data?.error || 'Failed to update profile'
@@ -1133,6 +1166,30 @@ export default {
   padding: 2rem;
   border-radius: 15px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.admin-header .badge {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  font-size: 0.9rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.admin-header .badge .d-flex {
+  line-height: 1.2;
+}
+
+.admin-header .badge .fw-bold {
+  font-size: 1rem;
+  color: #495057;
+}
+
+.admin-header .badge .text-muted {
+  font-size: 0.75rem;
+  margin-top: 2px;
 }
 
 .nav-container {

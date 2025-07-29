@@ -11,9 +11,12 @@
           <p class="text-white-50 mb-0">Manage your parking reservations</p>
         </div>
         <div class="col-auto">
-          <div class="badge bg-light text-dark fs-6 px-3 py-2">
-            <i class="fas fa-user me-2"></i>
-            User
+          <div class="user-badge">
+            <div class="user-info">
+              <i class="fas fa-user"></i>
+              <span class="username">{{ currentUser.username || 'User' }}</span>
+              <span v-if="currentUser.email" class="email">{{ currentUser.email }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -40,6 +43,16 @@
             @click.prevent="selectTab('summary')"
           >
             <i class="fas fa-chart-bar me-2"></i>Summary
+          </a>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            :class="{ active: activeTab === 'profile' }"
+            href="#"
+            @click.prevent="selectTab('profile')"
+          >
+            <i class="fas fa-user-edit me-2"></i>Edit Profile
           </a>
         </li>
       </ul>
@@ -264,6 +277,142 @@
         </div>
       </div>
     </div>
+
+    <!-- Edit Profile View -->
+    <div v-else-if="activeTab === 'profile'" class="fade-in">
+      <div class="enhanced-card">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-user-edit me-2 text-primary"></i>
+            Edit Profile
+          </h5>
+        </div>
+        <div class="card-body">
+          <form @submit.prevent="submitProfile" novalidate>
+            <!-- Username Field -->
+            <div class="mb-3">
+              <label for="username" class="form-label">
+                <i class="fas fa-user me-2"></i>Username
+              </label>
+              <input
+                type="text"
+                id="username"
+                v-model.trim="profile.username"
+                @blur="profileTouched.username = true"
+                :class="{ 'form-control': true, 'is-invalid': profileTouched.username && profile.username.length < 3 }"
+                placeholder="Enter username"
+                required
+              />
+              <div 
+                v-if="profileTouched.username && profile.username.length < 3" 
+                class="invalid-feedback"
+              >
+                Username must be at least 3 characters long.
+              </div>
+            </div>
+
+            <!-- Email Field -->
+            <div class="mb-3">
+              <label for="email" class="form-label">
+                <i class="fas fa-envelope me-2"></i>Email
+              </label>
+              <input
+                type="email"
+                id="email"
+                v-model.trim="profile.email"
+                @blur="profileTouched.email = true"
+                required
+                :class="{ 'form-control': true, 'is-invalid': profileTouched.email && !validEmail }"
+                placeholder="Enter email address"
+              />
+              <div 
+                v-if="profileTouched.email && !validEmail" 
+                class="invalid-feedback"
+              >
+                Please enter a valid email address.
+              </div>
+            </div>
+
+            <!-- New Password Field -->
+            <div class="mb-3">
+              <label for="password" class="form-label">
+                <i class="fas fa-lock me-2"></i>New Password
+              </label>
+              <input
+                type="password"
+                id="password"
+                v-model="profile.password"
+                @blur="profileTouched.password = true"
+                placeholder="Leave empty to keep current password"
+                :class="{ 'form-control': true, 'is-invalid': profileTouched.password && profile.password.length > 0 && profile.password.length < 8 }"
+              />
+              <div 
+                v-if="profileTouched.password && profile.password.length > 0 && profile.password.length < 8" 
+                class="invalid-feedback"
+              >
+                Password must be at least 8 characters long.
+              </div>
+              <div class="form-text">
+                <i class="fas fa-info-circle me-1"></i>
+                Leave blank to keep your current password
+              </div>
+            </div>
+
+            <!-- Confirm Password Field -->
+            <div class="mb-3" v-if="profile.password.length > 0">
+              <label for="confirmPassword" class="form-label">
+                <i class="fas fa-lock me-2"></i>Confirm New Password
+              </label>
+              <input
+                type="password"
+                id="confirmPassword"
+                v-model="profile.confirmPassword"
+                @blur="profileTouched.confirmPassword = true"
+                :class="{ 
+                  'form-control': true, 
+                  'is-invalid': profileTouched.confirmPassword && profile.password !== profile.confirmPassword
+                }"
+                placeholder="Confirm new password"
+              />
+              <div 
+                v-if="profileTouched.confirmPassword && profile.password !== profile.confirmPassword" 
+                class="invalid-feedback"
+              >
+                Passwords do not match.
+              </div>
+            </div>
+
+            <!-- Success/Error Messages -->
+            <div v-if="profileMessage.text" :class="`alert alert-${profileMessage.type} d-flex align-items-center`">
+              <i :class="`fas ${profileMessage.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'} me-2`"></i>
+              {{ profileMessage.text }}
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-flex gap-2">
+              <button 
+                type="submit" 
+                class="btn btn-primary"
+                :disabled="!isProfileFormValid || profileLoading"
+              >
+                <span v-if="profileLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                <i v-else class="fas fa-save me-2"></i>
+                {{ profileLoading ? 'Saving...' : 'Save Changes' }}
+              </button>
+              <button 
+                type="button" 
+                class="btn btn-secondary"
+                @click="resetProfileForm"
+                :disabled="profileLoading"
+              >
+                <i class="fas fa-undo me-2"></i>
+                Reset
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -274,8 +423,13 @@ export default {
   name: 'UserDashboard',
   data() {
     return {
-      // current tab: 'home' or 'summary'
+      // current tab: 'home', 'summary', or 'profile'
       activeTab: 'home',
+      // Current user information for header display
+      currentUser: {
+        username: '',
+        email: ''
+      },
       summary: { total_reservations: 0, total_spent: 0 },
       lots: [],
       reservations: [],
@@ -292,15 +446,48 @@ export default {
         message: '',
         alertClass: '',
         downloadUrl: null
+      },
+      // Profile editing
+      profile: {
+        username: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
+      },
+      profileTouched: {
+        username: false,
+        email: false,
+        password: false,
+        confirmPassword: false
+      },
+      profileLoading: false,
+      profileMessage: {
+        text: '',
+        type: 'success' // 'success' or 'danger'
       }
     }
   },
   async mounted() {
-    // initial load: lots and reservations only
+    // initial load: user info, lots and reservations
     await Promise.all([
+      this.loadCurrentUserForHeader(),
       this.fetchLots(),
       this.fetchReservations()
     ])
+  },
+  computed: {
+    validEmail() {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      return emailRegex.test(this.profile.email)
+    },
+    isProfileFormValid() {
+      const usernameValid = this.profile.username.length >= 3
+      const emailValid = this.validEmail
+      const passwordValid = this.profile.password.length === 0 || this.profile.password.length >= 8
+      const passwordsMatch = this.profile.password === this.profile.confirmPassword
+      
+      return usernameValid && emailValid && passwordValid && passwordsMatch
+    }
   },
   methods: {
       async fetchSummary() {
@@ -384,19 +571,6 @@ renderUserChart() {
       }
     }
   })
-},
-
-/**
- * Switches the current dashboard tab.
- */
-selectTab(tab) {
-  this.activeTab = tab;
-  if (tab === 'home') {
-    this.fetchLots();
-    this.fetchReservations();
-  } else if (tab === 'summary') {
-    this.fetchSummary();
-  }
 },
 
 /**
@@ -563,6 +737,116 @@ formatDateTime(dateTimeString) {
     return dateTimeString;
   }
 },
+
+// Profile Management Methods
+async loadCurrentUserForHeader() {
+  try {
+    const response = await this.$axios.get('/auth/me')
+    this.currentUser.username = response.data.username
+    this.currentUser.email = response.data.email
+  } catch (error) {
+    console.error('Error loading current user for header:', error)
+    // Set fallback values
+    this.currentUser.username = 'User'
+    this.currentUser.email = ''
+  }
+},
+
+async loadCurrentUser() {
+  try {
+    const response = await this.$axios.get('/auth/me')
+    this.profile.username = response.data.username
+    this.profile.email = response.data.email
+    // Don't load password for security
+    this.profile.password = ''
+    this.profile.confirmPassword = ''
+  } catch (error) {
+    console.error('Error loading user profile:', error)
+    this.profileMessage = {
+      text: 'Failed to load profile information',
+      type: 'danger'
+    }
+  }
+},
+
+async submitProfile() {
+  if (!this.isProfileFormValid) return
+  
+  this.profileLoading = true
+  this.profileMessage = { text: '', type: 'success' }
+  
+  try {
+    const updateData = {
+      username: this.profile.username,
+      email: this.profile.email
+    }
+    
+    // Only include password if it's been changed
+    if (this.profile.password.length > 0) {
+      updateData.password = this.profile.password
+    }
+    
+    await this.$axios.put('/auth/profile', updateData)
+    
+    // Update header information as well
+    this.currentUser.username = updateData.username
+    this.currentUser.email = updateData.email
+    
+    this.profileMessage = {
+      text: 'Profile updated successfully!',
+      type: 'success'
+    }
+    
+    // Clear password fields
+    this.profile.password = ''
+    this.profile.confirmPassword = ''
+    this.resetProfileTouched()
+    
+    // Auto-hide success message after 3 seconds
+    setTimeout(() => {
+      this.profileMessage.text = ''
+    }, 3000)
+    
+  } catch (error) {
+    console.error('Error updating profile:', error)
+    this.profileMessage = {
+      text: error.response?.data?.error || 'Failed to update profile',
+      type: 'danger'
+    }
+  } finally {
+    this.profileLoading = false
+  }
+},
+
+resetProfileForm() {
+  this.loadCurrentUser() // Reload original data
+  this.profile.password = ''
+  this.profile.confirmPassword = ''
+  this.resetProfileTouched()
+  this.profileMessage = { text: '', type: 'success' }
+},
+
+resetProfileTouched() {
+  this.profileTouched = {
+    username: false,
+    email: false,
+    password: false,
+    confirmPassword: false
+  }
+},
+
+// Enhanced selectTab to load profile data when needed
+selectTab(tab) {
+  this.activeTab = tab
+  if (tab === 'home') {
+    this.fetchLots()
+    this.fetchReservations()
+  } else if (tab === 'summary') {
+    this.fetchSummary()
+  } else if (tab === 'profile') {
+    this.loadCurrentUser()
+  }
+},
   }
 }
 </script>
@@ -722,6 +1006,53 @@ formatDateTime(dateTimeString) {
   transition: all 0.2s ease;
 }
 
+.user-badge {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 0.75rem 1.25rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+}
+
+.user-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.25rem;
+  min-height: 40px;
+}
+
+.user-info .username {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9rem;
+}
+
+.user-info .email {
+  font-size: 0.75rem;
+  color: #6c757d;
+  font-weight: 400;
+}
+
+.user-info i {
+  color: #667eea;
+  margin-bottom: 0.25rem;
+  font-size: 1rem;
+}
+
 @media (max-width: 768px) {
   .user-header {
     padding: 1.5rem;
@@ -739,6 +1070,18 @@ formatDateTime(dateTimeString) {
   .stats-icon {
     margin-right: 0;
     margin-bottom: 1rem;
+  }
+  
+  .user-badge {
+    padding: 0.5rem 1rem;
+  }
+  
+  .user-info .username {
+    font-size: 0.8rem;
+  }
+  
+  .user-info .email {
+    font-size: 0.7rem;
   }
 }
 </style>
