@@ -15,7 +15,7 @@
             v-model.trim="username"
             id="username"
             class="form-control"
-            :class="{ 'is-invalid': usernameTouched && !username }"
+            :class="{ 'is-invalid': formSubmitted && !username }"
             @blur="usernameTouched = true"
             placeholder="Username"
             required
@@ -23,7 +23,7 @@
           <label for="username">
             <i class="fas fa-user me-2"></i>Username
           </label>
-          <div class="invalid-feedback">
+          <div v-if="formSubmitted && !username" class="invalid-feedback">
             <i class="fas fa-exclamation-circle me-1"></i>Username is required.
           </div>
         </div>
@@ -34,7 +34,7 @@
             id="password"
             type="password"
             class="form-control"
-            :class="{ 'is-invalid': passwordTouched && !password }"
+            :class="{ 'is-invalid': formSubmitted && !password }"
             @blur="passwordTouched = true"
             placeholder="Password"
             required
@@ -42,7 +42,7 @@
           <label for="password">
             <i class="fas fa-lock me-2"></i>Password
           </label>
-          <div class="invalid-feedback">
+          <div v-if="formSubmitted && !password" class="invalid-feedback">
             <i class="fas fa-exclamation-circle me-1"></i>Password is required.
           </div>
         </div>
@@ -85,6 +85,7 @@ export default {
       error: '',
       usernameTouched: false,
       passwordTouched: false,
+      formSubmitted: false, // Track if form has been submitted
     }
   },
   computed: {
@@ -94,7 +95,14 @@ export default {
   },
   methods: {
     async doLogin() {
+      this.formSubmitted = true
       this.error = ''
+      
+      // Check form validation
+      if (!this.isFormValid) {
+        return
+      }
+      
       this.loading = true
       try {
         const { data } = await this.$axios.post('/auth/login', {

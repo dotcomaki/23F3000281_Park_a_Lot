@@ -15,7 +15,7 @@
             v-model.trim="username"
             id="username"
             class="form-control"
-            :class="{ 'is-invalid': usernameTouched && username.length < 3 }"
+            :class="{ 'is-invalid': formSubmitted && username.length < 3 }"
             @blur="usernameTouched = true"
             placeholder="Username"
             minlength="3"
@@ -24,7 +24,7 @@
           <label for="username">
             <i class="fas fa-user me-2"></i>Username
           </label>
-          <div class="invalid-feedback">
+          <div v-if="formSubmitted && username.length < 3" class="invalid-feedback">
             <i class="fas fa-exclamation-circle me-1"></i>Username must be at least 3 characters.
           </div>
         </div>
@@ -35,7 +35,7 @@
             id="email"
             type="email"
             class="form-control"
-            :class="{ 'is-invalid': emailTouched && !validEmail }"
+            :class="{ 'is-invalid': formSubmitted && !validEmail }"
             @blur="emailTouched = true"
             placeholder="Email"
             required
@@ -43,7 +43,7 @@
           <label for="email">
             <i class="fas fa-envelope me-2"></i>Email
           </label>
-          <div class="invalid-feedback">
+          <div v-if="formSubmitted && !validEmail" class="invalid-feedback">
             <i class="fas fa-exclamation-circle me-1"></i>Enter a valid email address.
           </div>
         </div>
@@ -54,7 +54,7 @@
             id="password"
             type="password"
             class="form-control"
-            :class="{ 'is-invalid': passwordTouched && password.length < 8 }"
+            :class="{ 'is-invalid': formSubmitted && password.length < 8 }"
             @blur="passwordTouched = true"
             placeholder="Password"
             minlength="8"
@@ -63,7 +63,7 @@
           <label for="password">
             <i class="fas fa-lock me-2"></i>Password
           </label>
-          <div class="invalid-feedback">
+          <div v-if="formSubmitted && password.length < 8" class="invalid-feedback">
             <i class="fas fa-exclamation-circle me-1"></i>Password must be at least 8 characters.
           </div>
         </div>
@@ -107,6 +107,7 @@ export default {
       usernameTouched: false,
       emailTouched: false,
       passwordTouched: false,
+      formSubmitted: false, // Track if form has been submitted
     }
   },
   computed: {
@@ -123,7 +124,14 @@ export default {
   },
   methods: {
     async doRegister() {
+      this.formSubmitted = true
       this.error = ''
+      
+      // Check form validation
+      if (!this.isFormValid) {
+        return
+      }
+      
       this.loading = true
       try {
         await this.$axios.post('/auth/register', {
