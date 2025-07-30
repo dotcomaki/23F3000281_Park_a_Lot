@@ -36,7 +36,7 @@ def send_daily_reminder():
             continue
         text = (
             f"Hi {user.username}! You haven’t parked today. "
-            "If you need a spot, please book one now: https://your-app-url/"
+            "If you need a spot, please book one now: http://localhost:8080"
         )
         payload = { "text": text }
         try:
@@ -63,12 +63,30 @@ def send_monthly_report():
     total_spent = (
         db.session.query(func.coalesce(func.sum(Reservation.parking_cost), 0))
         .filter(
-            Reservation.parked_at >= first_of_month,
-            Reservation.parked_at <= today,
-            Reservation.parking_cost != None
+            db.func.date(Reservation.parked_at) >= first_of_month,
+            db.func.date(Reservation.parked_at) <= today,
+            Reservation.parking_cost.isnot(None)
         )
         .scalar()
+    ) or 0
+
+    # Debug information
+    print(f"[MonthlyReport] Period: {first_of_month} to {today}")
+    print(f"[MonthlyReport] Total reservations: {total_reservations}")
+    print(f"[MonthlyReport] Total spent: ₹{total_spent:.2f}")
+    
+    # Additional debugging - check if there are any reservations with costs
+    reservations_with_cost = (
+        Reservation.query
+        .filter(
+            db.func.date(Reservation.parked_at) >= first_of_month,
+            db.func.date(Reservation.parked_at) <= today,
+            Reservation.parking_cost.isnot(None),
+            Reservation.parking_cost > 0
+        )
+        .count()
     )
+    print(f"[MonthlyReport] Reservations with cost > 0: {reservations_with_cost}")
 
     month_name = today.strftime("%B %Y")
     subject = f"Monthly Parking Report — {month_name}"
@@ -81,6 +99,8 @@ def send_monthly_report():
     )
 
     users = User.query.filter(User.role != 'admin').all()
+    print(f"[MonthlyReport] Sending reports to {len(users)} users")
+    
     for user in users:
         msg = Message(
             subject=subject,
@@ -92,6 +112,8 @@ def send_monthly_report():
             print(f"[MonthlyReport] Successfully emailed report to {user.email}")
         except Exception as e:
             print(f"[MonthlyReport] Failed to email {user.email}: {e}")
+
+    print(f"[MonthlyReport] Monthly report task completed for {month_name}")
 
 
 @celery.task(bind=True)
