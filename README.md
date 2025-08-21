@@ -1,4 +1,4 @@
-# 🚗 Vehicle Parking App - V2
+# Vehicle Parking App - Park-A-Lot
 
 A comprehensive multi-user parking management system built with Vue.js and Flask. Manages multiple parking lots, real-time spot availability, and user reservations for 4-wheeler parking.
 
@@ -13,9 +13,6 @@ A comprehensive multi-user parking management system built with Vue.js and Flask
 - [Tech Stack](#tech-stack)
 - [Quick Start](#quick-start)
 - [Project Structure](#project-structure)
-- [Setup Instructions](#setup-instructions)
-- [Running the Application](#running-the-application)
-- [API Documentation](#api-documentation)
 - [Background Tasks](#background-tasks)
 - [Contributing](#contributing)
 
@@ -53,7 +50,7 @@ A comprehensive multi-user parking management system built with Vue.js and Flask
 - **SQLite** - Database (development)
 
 ### Frontend
-- **Vue.js 3.2.x** - Progressive JavaScript framework
+- **Vue.js 3.2.x** - SPA JavaScript framework
 - **Bootstrap 5.3.x** - CSS framework
 - **Chart.js 4.5.x** - Data visualization
 - **Axios** - HTTP client for API calls
@@ -85,11 +82,11 @@ A comprehensive multi-user parking management system built with Vue.js and Flask
    # Make scripts executable
    chmod +x start.sh start_demo.sh
    
-   # For full setup and start
-   ./start.sh
-   
-   # OR for demo mode
+   # For full setup
    ./start_demo.sh
+   
+   # For demonstration mode
+   ./start.sh
    ```
 
 3. **Access the application**
@@ -123,191 +120,6 @@ parkingapp/
 ├── 📄 run_monthly_report.py  # Monthly report script
 └── 📄 README.md              # This file
 ```
-
-## 🔧 Setup Instructions
-
-### Method 1: Using Startup Scripts (Recommended)
-
-The easiest way to get started:
-
-```bash
-# Demo mode with sample data
-./start_demo.sh
-
-# Full production setup
-./start.sh
-```
-
-### Method 2: Manual Setup
-
-#### Backend Setup
-
-1. **Navigate to backend directory**
-   ```bash
-   cd backend
-   ```
-
-2. **Create virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Initialize database**
-   ```bash
-   python -c "from app import create_app; from extensions import db; app = create_app(); app.app_context().push(); db.create_all()"
-   ```
-
-5. **Create admin user**
-   ```bash
-   python create_admin.py
-   ```
-
-6. **Start Flask server**
-   ```bash
-   python app.py
-   ```
-
-#### Frontend Setup
-
-1. **Navigate to frontend directory**
-   ```bash
-   cd frontend
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Start development server**
-   ```bash
-   npm run serve
-   ```
-
-#### Celery Setup (Optional - for background tasks)
-
-1. **Start Celery worker**
-   ```bash
-   cd backend
-   celery -A celery_app.celery worker --loglevel=info
-   ```
-
-2. **Start Celery beat (for scheduled tasks)**
-   ```bash
-   celery -A celery_app.celery beat --loglevel=info
-   ```
-
-## 🏃‍♂️ Running the Application
-
-### Development Mode
-
-1. **Start backend** (Terminal 1)
-   ```bash
-   cd backend
-   source venv/bin/activate
-   python app.py
-   ```
-
-2. **Start frontend** (Terminal 2)
-   ```bash
-   cd frontend
-   npm run serve
-   ```
-
-3. **Optional: Start Celery** (Terminal 3)
-   ```bash
-   cd backend
-   celery -A celery_app.celery worker --loglevel=info
-   ```
-
-### Production Mode
-
-Use the provided startup script:
-```bash
-./start.sh
-```
-
-This script will:
-- Set up the backend with proper configuration
-- Build the frontend for production
-- Start all necessary services
-- Initialize the database with sample data
-
-## 📚 API Documentation
-
-### Authentication Endpoints
-```
-POST /auth/register    # User registration
-POST /auth/login      # User login
-POST /auth/logout     # User logout
-GET  /auth/me         # Get current user
-```
-
-### User Endpoints
-```
-GET  /user/lots                 # List parking lots
-POST /user/reservations        # Create reservation
-GET  /user/reservations        # Get user reservations
-PUT  /user/reservations/<id>   # Update reservation
-GET  /user/summary            # User statistics
-```
-
-### Admin Endpoints
-```
-GET    /admin/lots         # Manage parking lots
-POST   /admin/lots         # Create parking lot
-GET    /admin/users        # View all users
-GET    /admin/summary      # System analytics
-```
-
-### Response Format
-```json
-{
-  "data": {...},
-  "message": "Success",
-  "error": null
-}
-```
-
-## 🤖 Background Tasks
-
-### Daily Reminders
-Send Google Chat notifications to users who haven't parked:
-```bash
-python run_daily_reminder.py
-```
-
-### Monthly Reports
-Generate and email monthly analytics:
-```bash
-python run_monthly_report.py
-```
-
-### Setup Automated Tasks
-
-**Linux/Mac (Crontab):**
-```bash
-# Daily reminders at 9 AM
-0 9 * * * cd /path/to/project && python run_daily_reminder.py
-
-# Monthly reports on 1st day at 8 AM
-0 8 1 * * cd /path/to/project && python run_monthly_report.py
-```
-
-## 🎯 Default Admin
-
-After running the setup, you can login with:
-
-**Admin User:**
-- Username: `admin`
-- Password: `adminadmin`
-
 
 ## 🔧 Configuration
 
@@ -351,7 +163,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 👨‍💻 Author
 
-**Mohammad Akif**  
+**Akif M**  
 
 
 ## 🤝 Contributing
@@ -366,7 +178,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 If you encounter any issues:
 
-1. Check the [Issues](https://github.com/dotcomaki/parking-app/issues) page
+1. Check the [Issues](https://github.com/dotcomaki/parkalot/issues) page
 2. Create a new issue with detailed information
 3. Include error logs and steps to reproduce
 
